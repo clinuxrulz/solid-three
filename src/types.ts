@@ -78,7 +78,6 @@ export interface EventHandlers {
   onPointerMove: (event: Event<MouseEvent>) => void;
   onPointerEnter: (event: Event<MouseEvent>) => void;
   onPointerLeave: (event: Event<MouseEvent>) => void;
-  onPointerMissed: (event: Event<MouseEvent>) => void;
   onWheel: (event: Event<WheelEvent>) => void;
 }
 
