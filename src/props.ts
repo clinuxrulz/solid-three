@@ -1,5 +1,5 @@
 import {
-  Accessor,
+  type Accessor,
   children,
   createRenderEffect,
   mapArray,
@@ -139,10 +139,12 @@ export function applyProp<T>(source: S3.Instance<T>, type: string, value: any) {
   /* If the key contains a hyphen, we're setting a sub property. */
   if (type.indexOf("-") > -1) {
     const [property, ...rest] = type.split("-");
+    // @ts-expect-error TODO: fix type-error
     applyProp(source[property as string], rest.join("-"), value);
     return;
   }
 
+  // @ts-expect-error TODO: fix type-error
   if (NEEDS_UPDATE.includes(type) && ((!source[type] && value) || (source[type] && !value))) {
     // @ts-expect-error
     source.needsUpdate = true;
@@ -166,6 +168,7 @@ export function applyProp<T>(source: S3.Instance<T>, type: string, value: any) {
 
   if (isEventType(type)) {
     if (source instanceof Object3D && isInstance(source)) {
+      // @ts-expect-error TODO: fix type-error
       addToEventListeners(source, type);
     } else {
       console.error(
@@ -178,6 +181,7 @@ export function applyProp<T>(source: S3.Instance<T>, type: string, value: any) {
     return;
   }
 
+  // @ts-expect-error TODO: fix type-error
   const target = source[type];
   const context = useThree();
   const canvasProps = useCanvasProps();
@@ -207,14 +211,18 @@ export function applyProp<T>(source: S3.Instance<T>, type: string, value: any) {
     }
     // Else, just overwrite the value
     else {
+      // @ts-expect-error TODO: fix type-error
       source[type] = value;
 
       // Auto-convert sRGB textures, for now ...
       // https://github.com/pmndrs/react-three-fiber/issues/344
       if (
+        // @ts-expect-error TODO: fix type-error
         source[type] instanceof Texture &&
         // sRGB textures must be RGBA8 since r137 https://github.com/mrdoob/three.js/pull/23129
+        // @ts-expect-error TODO: fix type-error
         source[type].format === RGBAFormat &&
+        // @ts-expect-error TODO: fix type-error
         source[type].type === UnsignedByteType
       ) {
         createRenderEffect(() => {
@@ -222,6 +230,7 @@ export function applyProp<T>(source: S3.Instance<T>, type: string, value: any) {
           canvasProps.linear;
           canvasProps.flat;
 
+          // @ts-expect-error TODO: fix type-error
           const texture = source[type] as Texture;
           if (hasColorSpace(texture) && hasColorSpace(context.gl)) {
             texture.colorSpace = context.gl.outputColorSpace;
@@ -301,10 +310,13 @@ export const manageSceneGraph = <T extends S3.Instance<Object3D>>(
             while (true) {
               const property = path.shift()!;
               if (path.length === 0) {
+                // @ts-expect-error TODO: fix type-error
                 target[property] = child;
+                // @ts-expect-error TODO: fix type-error
                 onCleanup(() => (parent[attachProp] = undefined));
                 break;
               } else {
+                // @ts-expect-error TODO: fix type-error
                 target = parent[property];
               }
             }

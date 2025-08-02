@@ -13,8 +13,9 @@
     "noEmit": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
     "sourceMap": true,
-    "strict": false,
+    "strict": true,
     "target": "ESNext"
   },
   "exclude": ["dist", "build", "node_modules"]

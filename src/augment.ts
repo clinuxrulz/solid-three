@@ -14,6 +14,7 @@ export const augment = <T>(instance: T, augmentation = {}) => {
   if (instance && typeof instance === "object" && $S3C in instance) {
     return instance as S3.Instance<T>;
   }
+  // @ts-expect-error TODO: fix type-error
   instance[$S3C] = { children: new Set(), ...augmentation };
   return instance as S3.Instance<T>;
 };

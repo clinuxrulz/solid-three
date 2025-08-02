@@ -1,4 +1,4 @@
-import { Accessor } from "solid-js";
+import type { Accessor } from "solid-js";
 import { S3 } from "..";
 import { augment } from "../augment";
 import { Stack } from "./stack";

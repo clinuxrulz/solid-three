@@ -1,10 +1,10 @@
-import { Renderer } from "three";
+import { type Renderer, Texture } from "three";
 
 /**
  * Returns `true` with correct TS type inference if an object has a configurable color space (since r152).
  */
 export const hasColorSpace = <
-  T extends Renderer | THREE.Texture | object,
+  T extends Renderer | Texture | object,
   P = T extends Renderer ? { outputColorSpace: string } : { colorSpace: string },
 >(
   object: T,

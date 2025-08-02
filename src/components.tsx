@@ -1,10 +1,10 @@
-import { JSX, ParentProps, createMemo, createRenderEffect, mergeProps } from "solid-js";
+import { type JSX, type ParentProps, createMemo, createRenderEffect, mergeProps } from "solid-js";
 import { Object3D } from "three";
 import { S3 } from "./";
 import { augment } from "./augment";
 import { threeContext, useThree } from "./hooks";
 import { manageProps, manageSceneGraph } from "./props";
-import { InstanceFromConstructor } from "./type-utils";
+import { type InstanceFromConstructor } from "./type-utils";
 import { isInstance } from "./utils/is-instance";
 import { withContext } from "./utils/with-context";
 
@@ -30,9 +30,11 @@ export const Portal = (props: PortalProps) => {
   });
 
   createRenderEffect(() => {
+    // @ts-expect-error TODO: fix type-error
     manageSceneGraph(scene(), () =>
       withContext(
         () => props.children as unknown as S3.Instance | S3.Instance[],
+        // @ts-expect-error TODO: fix type-error
         threeContext,
         mergeProps(context, {
           get scene() {

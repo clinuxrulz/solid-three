@@ -1,7 +1,6 @@
 import * as THREE from "three";
-
 import {
-  ComponentProps,
+  type ComponentProps,
   For,
   Show,
   createRenderEffect,
@@ -207,6 +206,7 @@ describe("renderer", () => {
         <>
           <T.Mesh ref={immutableRef} />
           <T.Mesh ref={mutableRef} />
+          {/* @ts-expect-error TODO: fix type-error */}
           <T.Mesh ref={r => (mutableRefSpecific = r)} />
         </>
       );
@@ -306,6 +306,7 @@ describe("renderer", () => {
 
   it("does the full lifecycle", async () => {
     const log: string[] = [];
+    // @ts-expect-error TODO: fix type-error
     const Log = props => {
       onMount(() => log.push("mount " + props.name));
       onCleanup(() => log.push("unmount " + props.name));
@@ -514,6 +515,7 @@ describe("renderer", () => {
     let state = test(() => <T.Group />, { linear: false });
 
     expect(state.gl.toneMapping).toBe(THREE.ACESFilmicToneMapping);
+    // @ts-expect-error TODO: fix type-error
     expect(state.gl.outputEncoding).toBe(THREE.sRGBEncoding);
   });
 
@@ -560,7 +562,9 @@ describe("renderer", () => {
   });
 
   it("should set renderer props via gl prop", async () => {
+    // @ts-expect-error TODO: fix type-error
     const gl = test(() => <T.Group />, { gl: { physicallyCorrectLights: true } }).gl;
+    // @ts-expect-error TODO: fix type-error
     expect(gl.physicallyCorrectLights).toBe(true);
   });
 
@@ -607,21 +611,26 @@ describe("renderer", () => {
       },
     }).gl as unknown as THREE.WebGLRenderer & { outputColorSpace: string };
 
+    // @ts-expect-error TODO: fix type-error
     expect(gl.outputEncoding).toBe(sRGBEncoding);
     expect(gl.toneMapping).toBe(THREE.ACESFilmicToneMapping);
+    // @ts-expect-error TODO: fix type-error
     expect(texture.encoding).toBe(sRGBEncoding);
 
     setLinear(true);
     setFlat(true);
 
+    // @ts-expect-error TODO: fix type-error
     expect(gl.outputEncoding).toBe(LinearEncoding);
     expect(gl.toneMapping).toBe(THREE.NoToneMapping);
+    // @ts-expect-error TODO: fix type-error
     expect(texture.encoding).toBe(LinearEncoding);
 
     // Sets outputColorSpace since r152
     const SRGBColorSpace = "srgb";
     const LinearSRGBColorSpace = "srgb-linear";
 
+    // @ts-expect-error TODO: fix type-error
     gl.outputColorSpace = "test";
     texture.colorSpace = "";
 
@@ -740,6 +749,7 @@ describe("renderer", () => {
 
     test(() => (
       <T.MeshBasicMaterial
+        // @ts-ignore TODO: fix type-error
         ref={material}
         map={signal() === 1 ? texture1 : texture2}
         map-needsUpdate={true}
@@ -765,6 +775,7 @@ describe("renderer", () => {
     function Test() {
       const [scale, setScale] = createSignal(true);
       createRenderEffect(() => void setScale(false), []);
+      // @ts-ignore TODO: fix type-error
       return <T.Mesh ref={ref} scale={scale() ? 0.5 : undefined} />;
     }
 

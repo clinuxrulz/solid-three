@@ -1,4 +1,4 @@
-import { MergeProps, mergeProps } from "solid-js";
+import { type MergeProps, mergeProps } from "solid-js";
 
 /** Extracts the keys of the optional properties in T. */
 type KeyOfOptionals<T> = keyof {

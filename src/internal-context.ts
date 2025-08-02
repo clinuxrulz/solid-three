@@ -1,7 +1,7 @@
-import { JSX, createContext, useContext } from "solid-js";
+import { type JSX, createContext, useContext } from "solid-js";
 import { Object3D } from "three";
 import { S3 } from "./";
-import { CanvasProps } from "./canvas";
+import type { CanvasProps } from "./canvas";
 
 /**
  * Registers an event listener for an `AugmentedElement` to the nearest Canvas component up the component tree.

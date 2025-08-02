@@ -1,10 +1,10 @@
-import { createMemo, JSX, mergeProps } from "solid-js";
+import { createMemo, type JSX, mergeProps } from "solid-js";
 import type * as THREE from "three";
 import { S3 } from ".";
 import { augment } from "./augment";
 import { Portal, Primitive } from "./components";
 import { manageProps } from "./props";
-import { Constructor } from "./type-utils";
+import type { Constructor } from "./type-utils";
 
 /**********************************************************************************/
 /*                                                                                */
@@ -66,6 +66,7 @@ export const T = new Proxy<
     /* Create and memoize a wrapper component for the specified property. */
     if (!T_CACHE.has(name)) {
       /* Try and find a constructor within the THREE namespace. */
+      // @ts-expect-error TODO: fix type-error
       const constructor = CATALOGUE[name];
 
       /* If no constructor is found, return undefined. */

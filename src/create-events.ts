@@ -1,5 +1,5 @@
 import { onCleanup } from "solid-js";
-import { Intersection, Object3D } from "three";
+import { type Intersection, Object3D } from "three";
 import { S3 } from "./";
 import { $S3C } from "./augment";
 import { isInstance } from "./utils/is-instance";
@@ -100,6 +100,7 @@ export const createEvents = (context: S3.Context) => {
       if (event.stopped) break;
       // If node is an AugmentedElement we call the type's event-handler if it is defined.
       if (isInstance(node)) {
+        // @ts-expect-error TODO: fix type-error
         node[$S3C].props[type]?.(event);
       }
       // We bubble a layer down.
@@ -121,11 +122,13 @@ export const createEvents = (context: S3.Context) => {
       const props = intersection.object[$S3C].props;
 
       if (!enterEvent.stopped && !priorIntersects[type].has(intersection.object)) {
+        // @ts-expect-error TODO: fix type-error
         props[`on${type}Enter`]?.(enterEvent);
         bubbleDown(intersection.object, `on${type}Enter`, enterEvent);
       }
 
       if (!moveEvent.stopped) {
+        // @ts-expect-error TODO: fix type-error
         props[`on${type}Move`]?.(moveEvent);
         bubbleDown(intersection.object, `on${type}Move`, moveEvent);
       }
@@ -144,6 +147,7 @@ export const createEvents = (context: S3.Context) => {
 
         if (!leaveEvent.stopped) {
           const props = object[$S3C].props;
+          // @ts-expect-error TODO: fix type-error
           props[`on${type}Leave`]?.(leaveEvent);
           bubbleDown(object, `on${type}Leave`, leaveEvent);
         }
@@ -167,6 +171,7 @@ export const createEvents = (context: S3.Context) => {
     (nativeEvent: TEvent) => {
       const event = createThreeEvent(nativeEvent);
       for (const { object } of raycast(nativeEvent, type)) {
+        // @ts-expect-error TODO: fix type-error
         object[$S3C].props?.[type]?.(event);
         bubbleDown(object, type, event);
         if (event.stopped) break;
@@ -200,7 +205,9 @@ export const createEvents = (context: S3.Context) => {
     // Derived events are handled by `on{Pointer|Mouse}Move`
     const derivedType = isDerivedEvent ? `on${isPointerEvent ? "Pointer" : "Mouse"}Move` : type;
 
+    // @ts-expect-error TODO: fix type-error
     if (!eventRegistry[derivedType].find(value => value === object)) {
+      // @ts-expect-error TODO: fix type-error
       eventRegistry[derivedType].push(object);
     }
 
@@ -208,7 +215,7 @@ export const createEvents = (context: S3.Context) => {
       // NOTE:  When a move/derived event-handler cleans up, it only removes the object from the registry
       //        if the object is currently not listening to another move/derived-event.
       if (derivedType.includes("Move")) {
-        const props = object[$S3C].props;
+        const props = object[$S3C].props ?? {};
         if (isPointerEvent) {
           if ("onPointerMove" in props || "onPointerEnter" in props || "onPointerLeave" in props) {
             return;
@@ -220,6 +227,7 @@ export const createEvents = (context: S3.Context) => {
         }
       }
 
+      // @ts-expect-error TODO: fix type-error
       removeElementFromArray(eventRegistry[type], object);
     });
   };

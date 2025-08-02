@@ -67,6 +67,7 @@ describe("hooks", () => {
 
     const Component = () => {
       const model = useLoader(mockGLTFLoader, () => "/suzanne.glb");
+      // @ts-expect-error TODO: fix type-error
       return <Show when={model()}>{model => <T.Primitive object={model()} />}</Show>;
     };
 
@@ -122,7 +123,9 @@ describe("hooks", () => {
         <Show when={resource()} keyed>
           {([mockMesh, mockScene]) => (
             <>
+              {/* @ts-expect-error TODO: fix type-error */}
               <T.Primitive object={mockMesh} />
+              {/* @ts-expect-error TODO: fix type-error */}
               <T.Primitive object={mockScene} />
             </>
           )}

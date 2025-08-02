@@ -1,4 +1,4 @@
-import { Accessor, Setter, createSignal, getOwner, onCleanup, untrack } from "solid-js";
+import { type Accessor, type Setter, createSignal, getOwner, onCleanup, untrack } from "solid-js";
 
 /** Class representing a stack data structure. */
 export class Stack<T = any> {
@@ -36,6 +36,7 @@ export class Stack<T = any> {
       array.push(value);
       return array;
     });
+    // @ts-expect-error TODO: fix type-error
     if (import.meta.env?.MODE === "development") {
       const array = untrack(this.#array.bind(this));
       if (array.length > 2) {

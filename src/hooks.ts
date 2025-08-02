@@ -1,4 +1,4 @@
-import { Accessor, Resource, createContext, createResource, useContext } from "solid-js";
+import { type Accessor, type Resource, createContext, createResource, useContext } from "solid-js";
 import { S3 } from "./";
 
 /**********************************************************************************/
@@ -107,11 +107,14 @@ export function useLoader<
   setup?.(loader);
 
   const load = (arg: string) => {
+    // @ts-expect-error TODO: fix type-error
     if (resources[arg]) return resources[arg];
+    // @ts-expect-error TODO: fix type-error
     return (resources[arg] = new Promise((resolve, reject) =>
       loader.load(
         arg,
         value => {
+          // @ts-expect-error TODO: fix type-error
           resources[arg] = value;
           resolve(value);
         },
@@ -127,7 +130,7 @@ export function useLoader<
       : load(args as string),
   );
 
-  return resource as TArgs extends LoaderUrl<TLoader>
+  return resource as /* TArgs extends  LoaderUrl<TLoader>
     ? Resource<LoaderResult<TLoader>>
-    : Resource<{ [K in keyof TArgs]: LoaderResult<TLoader> }>;
+    : */ Resource<{ [K in keyof TArgs]: LoaderResult<TLoader> }>;
 }

@@ -1,4 +1,11 @@
-import { ComponentProps, JSX, createRenderEffect, onCleanup, onMount, splitProps } from "solid-js";
+import {
+  type ComponentProps,
+  type JSX,
+  createRenderEffect,
+  onCleanup,
+  onMount,
+  splitProps,
+} from "solid-js";
 import { Camera, OrthographicCamera, Raycaster, Scene, WebGLRenderer } from "three";
 import { S3 } from "./";
 import { createThree } from "./create-three";
@@ -46,8 +53,8 @@ export interface CanvasProps extends ComponentProps<"div"> {
  */
 export function Canvas(_props: CanvasProps) {
   const [props, canvasProps] = splitProps(_props, ["fallback", "camera", "children", "ref"]);
-  let canvas: HTMLCanvasElement;
-  let container: HTMLDivElement;
+  let canvas: HTMLCanvasElement = null!;
+  let container: HTMLDivElement = null!;
 
   onMount(() => {
     const context = createThree(canvas, props);
