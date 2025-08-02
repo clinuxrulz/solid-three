@@ -1,4 +1,4 @@
-import { Accessor } from "solid-js";
+import type { Accessor } from "solid-js";
 
 export function resolve<T>(child: Accessor<T> | T, recursive = false): T {
   return typeof child !== "function"

@@ -1,6 +1,5 @@
-import { Accessor, JSX, createRenderEffect, createRoot, mergeProps } from "solid-js";
-
-import { CanvasProps } from "../canvas";
+import { type Accessor, type JSX, createRenderEffect, createRoot, mergeProps } from "solid-js";
+import type { CanvasProps } from "../canvas";
 import { createThree } from "../create-three";
 import { WebGL2RenderingContext } from "./webgl2-rendering-context";
 

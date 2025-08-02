@@ -25,13 +25,13 @@ import {
 } from "three";
 import { S3 } from "./";
 import { augment } from "./augment";
-import { CanvasProps } from "./canvas";
+import type { CanvasProps } from "./canvas";
 import { createEvents } from "./create-events";
 import { AugmentedStack } from "./data-structure/augmented-stack";
 import { frameContext, threeContext } from "./hooks";
 import { canvasPropsContext, eventContext } from "./internal-context";
 import { manageProps, manageSceneGraph } from "./props";
-import { Context } from "./types";
+import type { Context } from "./types";
 import { defaultProps } from "./utils/default-props";
 import { removeElementFromArray } from "./utils/remove-element-from-array";
 import { useMeasure } from "./utils/use-measure";

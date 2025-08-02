@@ -1,5 +1,5 @@
 import {
-  Accessor,
+  type Accessor,
   children,
   createRenderEffect,
   mapArray,

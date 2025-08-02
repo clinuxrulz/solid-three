@@ -1,4 +1,11 @@
-import { ComponentProps, JSX, createRenderEffect, onCleanup, onMount, splitProps } from "solid-js";
+import {
+  type ComponentProps,
+  type JSX,
+  createRenderEffect,
+  onCleanup,
+  onMount,
+  splitProps,
+} from "solid-js";
 import { Camera, OrthographicCamera, Raycaster, Scene, WebGLRenderer } from "three";
 import { S3 } from "./";
 import { createThree } from "./create-three";

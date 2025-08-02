@@ -1,4 +1,4 @@
-import { Accessor, Resource, createContext, createResource, useContext } from "solid-js";
+import { type Accessor, type Resource, createContext, createResource, useContext } from "solid-js";
 import { S3 } from "./";
 
 /**********************************************************************************/

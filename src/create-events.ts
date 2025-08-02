@@ -1,5 +1,5 @@
 import { onCleanup } from "solid-js";
-import { Intersection, Object3D } from "three";
+import { type Intersection, Object3D } from "three";
 import { S3 } from "./";
 import { $S3C } from "./augment";
 import { isInstance } from "./utils/is-instance";

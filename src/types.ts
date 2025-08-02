@@ -1,15 +1,15 @@
-import { Accessor, JSX, Setter, Component as SolidComponent } from "solid-js";
+import type { Accessor, JSX, Setter, Component as SolidComponent } from "solid-js";
 import type * as THREE from "three";
 import { S3 } from ".";
 import { $S3C } from "./augment";
 import { Portal, Primitive } from "./components";
-import {
+import type {
   Constructor,
   ConstructorOverloadParameters,
   InstanceFromConstructor,
   Overwrite,
 } from "./type-utils";
-import { Measure } from "./utils/use-measure";
+import type { Measure } from "./utils/use-measure";
 
 declare global {
   namespace SolidThree {

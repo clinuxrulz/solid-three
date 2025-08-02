@@ -1,7 +1,6 @@
 import * as THREE from "three";
-
 import {
-  ComponentProps,
+  type ComponentProps,
   For,
   Show,
   createRenderEffect,

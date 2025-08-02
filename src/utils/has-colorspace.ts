@@ -1,4 +1,4 @@
-import { Renderer, Texture } from "three";
+import { type Renderer, Texture } from "three";
 
 /**
  * Returns `true` with correct TS type inference if an object has a configurable color space (since r152).

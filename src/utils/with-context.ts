@@ -1,4 +1,4 @@
-import { Accessor, Context, JSX } from "solid-js";
+import type { Accessor, Context, JSX } from "solid-js";
 
 export type ContextProviderProps = {
   children?: JSX.Element;
