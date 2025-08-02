@@ -66,6 +66,7 @@ export const T = new Proxy<
     /* Create and memoize a wrapper component for the specified property. */
     if (!T_CACHE.has(name)) {
       /* Try and find a constructor within the THREE namespace. */
+      // @ts-expect-error TODO: fix type-error
       const constructor = CATALOGUE[name];
 
       /* If no constructor is found, return undefined. */

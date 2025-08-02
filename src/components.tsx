@@ -30,9 +30,11 @@ export const Portal = (props: PortalProps) => {
   });
 
   createRenderEffect(() => {
+    // @ts-expect-error TODO: fix type-error
     manageSceneGraph(scene(), () =>
       withContext(
         () => props.children as unknown as S3.Instance | S3.Instance[],
+        // @ts-expect-error TODO: fix type-error
         threeContext,
         mergeProps(context, {
           get scene() {

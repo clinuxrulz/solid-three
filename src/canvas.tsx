@@ -46,8 +46,8 @@ export interface CanvasProps extends ComponentProps<"div"> {
  */
 export function Canvas(_props: CanvasProps) {
   const [props, canvasProps] = splitProps(_props, ["fallback", "camera", "children", "ref"]);
-  let canvas: HTMLCanvasElement;
-  let container: HTMLDivElement;
+  let canvas: HTMLCanvasElement = null!;
+  let container: HTMLDivElement = null!;
 
   onMount(() => {
     const context = createThree(canvas, props);

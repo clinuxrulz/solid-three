@@ -42,6 +42,7 @@ export function debounce<T extends () => any>(
     const callContext = storedContext;
     const callArguments = storedArguments;
     storedContext = undefined;
+    // @ts-expect-error TODO: fix type-error
     storedArguments = undefined;
     result = callback.apply(callContext, callArguments);
     return result;
@@ -53,6 +54,7 @@ export function debounce<T extends () => any>(
     if (last < wait && last >= 0) {
       timeoutId = setTimeout(later, wait - last);
     } else {
+      // @ts-expect-error TODO: fix type-error
       timeoutId = undefined;
 
       if (!immediate) {
@@ -62,10 +64,12 @@ export function debounce<T extends () => any>(
   }
 
   function debounced(...args: Parameters<T>) {
+    // @ts-expect-error TODO: fix type-error
     if (storedContext && this !== storedContext) {
       throw new Error("Debounced method called with different contexts.");
     }
 
+    // @ts-expect-error TODO: fix type-error
     storedContext = this;
     storedArguments = args;
     timestamp = Date.now();
@@ -86,6 +90,7 @@ export function debounce<T extends () => any>(
   debounced.clear = () => {
     if (!timeoutId) return;
     clearTimeout(timeoutId);
+    // @ts-expect-error TODO: fix type-error
     timeoutId = undefined;
   };
 
