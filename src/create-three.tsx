@@ -100,20 +100,23 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   /*                                                                                */
   /**********************************************************************************/
 
-  let isRenderPending = false;
+  let pendingRenderRequest: number | undefined;
   function render(timestamp: number, frame?: XRFrame) {
+    if (!context.gl) {
+      return;
+    }
     if (props.frameloop === "never") {
       context.clock.elapsedTime = timestamp;
     }
-    isRenderPending = false;
+    pendingRenderRequest = undefined;
     context.gl.render(context.scene, context.camera);
     frameListeners.forEach(listener => listener(context, timestamp, frame));
   }
   function requestRender() {
-    if (isRenderPending) return;
-    isRenderPending = true;
-    requestAnimationFrame(render);
+    if (pendingRenderRequest) return;
+    pendingRenderRequest = requestAnimationFrame(render);
   }
+  onCleanup(() => pendingRenderRequest && cancelAnimationFrame(pendingRenderRequest));
 
   /**********************************************************************************/
   /*                                                                                */
@@ -180,6 +183,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   /**********************************************************************************/
 
   manageSceneGraph(
+    // @ts-expect-error TODO: fix type-error
     context.scene,
     children(() =>
       withMultiContexts(
@@ -201,16 +205,16 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   /*                                                                                */
   /**********************************************************************************/
 
+  let pendingLoopRequest: number | undefined;
   function loop(value: number) {
-    if (canvasProps.frameloop === "always") {
-      requestAnimationFrame(loop);
-    }
+    pendingLoopRequest = requestAnimationFrame(loop);
     context.render(value);
   }
   createRenderEffect(() => {
     if (canvasProps.frameloop === "always") {
-      requestAnimationFrame(loop);
+      pendingLoopRequest = requestAnimationFrame(loop);
     }
+    onCleanup(() => pendingLoopRequest && cancelAnimationFrame(pendingLoopRequest));
   });
 
   // Return context merged with `eventRegistry` and `addFrameListeners``
@@ -355,8 +359,8 @@ function createDefaultElements(context: S3.Context, props: CanvasProps) {
         },
       }),
     ),
-    gl: createMemo(() =>
-      augment(
+    gl: createMemo(() => {
+      const gl =
         props.gl instanceof WebGLRenderer
           ? // props.gl can be a WebGLRenderer provided by the user
             props.gl
@@ -364,13 +368,17 @@ function createDefaultElements(context: S3.Context, props: CanvasProps) {
           ? // or a callback that returns a Renderer
             props.gl(context.canvas)
           : // if props.gl is not defined we default to a WebGLRenderer
-            new WebGLRenderer({ canvas: context.canvas }),
-        {
-          get props() {
-            return props.gl || {};
-          },
+            new WebGLRenderer({ canvas: context.canvas });
+
+      console.log("GL IS", gl);
+
+      context.canvas.addEventListener("contextlost", () => console.log("lose context!"));
+
+      return augment(gl, {
+        get props() {
+          return props.gl || {};
         },
-      ),
-    ),
+      });
+    }),
   };
 }
