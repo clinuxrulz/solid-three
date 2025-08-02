@@ -370,10 +370,6 @@ function createDefaultElements(context: S3.Context, props: CanvasProps) {
           : // if props.gl is not defined we default to a WebGLRenderer
             new WebGLRenderer({ canvas: context.canvas });
 
-      console.log("GL IS", gl);
-
-      context.canvas.addEventListener("contextlost", () => console.log("lose context!"));
-
       return augment(gl, {
         get props() {
           return props.gl || {};
