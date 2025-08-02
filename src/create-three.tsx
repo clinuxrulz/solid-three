@@ -185,18 +185,17 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   manageSceneGraph(
     // @ts-expect-error TODO: fix type-error
     context.scene,
-    children(() =>
-      withMultiContexts(
-        () => canvasProps.children,
-        [
-          // Dependency injection of all the contexts.
-          [threeContext, context],
-          [frameContext, addFrameListener],
-          [eventContext, addEventListener],
-          [canvasPropsContext, canvasProps],
-        ],
-      ),
-    ) as any,
+    children(() => (
+      <eventContext.Provider value={addEventListener}>
+        <frameContext.Provider value={addFrameListener}>
+          <threeContext.Provider value={context}>
+            <canvasPropsContext.Provider value={canvasProps}>
+              {canvasProps.children}
+            </canvasPropsContext.Provider>
+          </threeContext.Provider>
+        </frameContext.Provider>
+      </eventContext.Provider>
+    )) as any,
   );
 
   /**********************************************************************************/
