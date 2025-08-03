@@ -61,17 +61,19 @@ export function Canvas(_props: CanvasProps) {
 
     // Resize observer for the canvas to adjust camera and renderer on size change
     function onResize() {
-      context.gl.setSize(globalThis.innerWidth, globalThis.innerHeight);
+      const { width, height } = container.getBoundingClientRect();
+      context.gl.setSize(width, height);
       context.gl.setPixelRatio(globalThis.devicePixelRatio);
 
       if (context.camera instanceof OrthographicCamera) {
-        context.camera.left = globalThis.innerWidth / -2;
-        context.camera.right = globalThis.innerWidth / 2;
-        context.camera.top = globalThis.innerHeight / 2;
-        context.camera.bottom = globalThis.innerHeight / -2;
+        context.camera.left = width / -2;
+        context.camera.right = width / 2;
+        context.camera.top = height / 2;
+        context.camera.bottom = height / -2;
       } else {
-        context.camera.aspect = globalThis.innerWidth / globalThis.innerHeight;
+        context.camera.aspect = width / height;
       }
+
       context.camera.updateProjectionMatrix();
       context.render(performance.now());
     }
@@ -89,18 +91,18 @@ export function Canvas(_props: CanvasProps) {
 
   return (
     <div
+      ref={container!}
       {...canvasProps}
       style={{
         position: "relative",
         width: "100%",
         height: "100%",
         overflow: "hidden",
+        display: "flex",
         ...canvasProps.style,
       }}
     >
-      <div ref={container!} style={{ width: "100%", height: "100%" }}>
-        <canvas ref={canvas!} style={{ width: "100%", height: "100%" }} />
-      </div>
+      <canvas ref={canvas!} style={{ width: "100%", height: "100%" }} />
     </div>
   );
 }
