@@ -20,10 +20,11 @@
     "build": "tsup",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "vite playground",
-    "test": "vitest",
-    "types": "tsc --emitDeclarationOnly --declarationDir types",
     "lint:code": "eslint --max-warnings 0 src/**/*.{ts,tsx}",
-    "lint:types": "tsc --noEmit"
+    "lint:types": "tsc --noEmit",
+    "prepublishOnly": "pnpm lint:code && pnpm build",
+    "test": "vitest",
+    "types": "tsc --emitDeclarationOnly --declarationDir types"
   },
   "exports": {
     ".": {
