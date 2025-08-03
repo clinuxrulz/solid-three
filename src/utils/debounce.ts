@@ -76,10 +76,12 @@ export function debounce<T extends () => any>(
 
     const callNow = immediate && !timeoutId;
 
+    // eslint-disable-next-line
     if (!timeoutId) {
       timeoutId = setTimeout(later, wait);
     }
 
+    // eslint-disable-next-line
     if (callNow) {
       result = run();
     }
@@ -88,6 +90,7 @@ export function debounce<T extends () => any>(
   }
 
   debounced.clear = () => {
+    // eslint-disable-next-line
     if (!timeoutId) return;
     clearTimeout(timeoutId);
     // @ts-expect-error TODO: fix type-error
@@ -95,6 +98,7 @@ export function debounce<T extends () => any>(
   };
 
   debounced.flush = () => {
+    // eslint-disable-next-line
     if (!timeoutId) return;
     debounced.trigger();
   };
