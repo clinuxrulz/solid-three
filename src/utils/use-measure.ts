@@ -43,7 +43,9 @@ export function useMeasure(options?: UseMeasureOptions) {
 
   const ResizeObserver =
     config.polyfill ||
-    (typeof globalThis === "undefined" ? class ResizeObserver {} : (globalThis as any).ResizeObserver);
+    (typeof globalThis === "undefined"
+      ? class ResizeObserver {}
+      : (globalThis as any).ResizeObserver);
 
   if (!ResizeObserver) {
     throw new Error(
@@ -63,7 +65,7 @@ export function useMeasure(options?: UseMeasureOptions) {
     y: 0,
   });
   const scrollContainers = createMemo(() => findScrollContainers(element()));
-  let lastBounds: Measure;
+  let lastBounds: Measure | undefined;
 
   const getDebounce = (type: "scroll" | "resize") => {
     const debounce = config.debounce
@@ -114,7 +116,8 @@ export function useMeasure(options?: UseMeasureOptions) {
 
     createEffect(
       whenever(scrollContainers, scrollContainers => {
-        if (!config.scroll || !scrollContainers) return;
+        if (!config.scroll) return;
+
         scrollContainers.forEach(scrollContainer =>
           scrollContainer.addEventListener("scroll", onScroll, {
             capture: true,

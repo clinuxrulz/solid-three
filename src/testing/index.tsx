@@ -115,6 +115,7 @@ const createTestCanvas = ({ width = 1280, height = 800 } = {}) => {
   canvas.width = width;
   canvas.height = height;
 
+  // eslint-disable-next-line
   if (globalThis.HTMLCanvasElement) {
     const getContext = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, id: string) {
@@ -125,8 +126,10 @@ const createTestCanvas = ({ width = 1280, height = 800 } = {}) => {
 
   class WebGLRenderingContext extends WebGL2RenderingContext {}
   // @ts-expect-error
+  // eslint-disable-next-line
   globalThis.WebGLRenderingContext ??= WebGLRenderingContext;
   // @ts-expect-error
+  // eslint-disable-next-line
   globalThis.WebGL2RenderingContext ??= WebGL2RenderingContext;
 
   return canvas;
