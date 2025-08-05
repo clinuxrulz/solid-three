@@ -18,8 +18,9 @@
   ],
   "scripts": {
     "build": "tsup",
+    "build:dev": "vite build playground",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
-    "dev": "vite",
+    "dev": "vite playground",
     "lint:circular": "dpdm -T src",
     "lint:code": "eslint --max-warnings 0 src/**/*.{ts,tsx}",
     "lint:types": "tsc --noEmit",
