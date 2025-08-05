@@ -1,8 +1,8 @@
 import { A, Route, Router } from "@solidjs/router"
 import type { ParentProps } from "solid-js"
 import * as THREE from "three"
-import { Canvas, extend, T } from "../src/index.ts"
-import { Basic } from "./Basic.tsx"
+import { extend, T } from "../src/index.ts"
+import { Basic } from "./examples/Basic.tsx"
 import "./index.css"
 
 extend(THREE)
@@ -44,16 +44,7 @@ function Layout(props: ParentProps) {
           Home
         </A>
       </nav>
-      <Canvas
-        style={{ width: "100vw", height: "100vh" }}
-        camera={{ position: new THREE.Vector3(0, 0, 10) }}
-        onClick={event => console.debug("canvas clicked", event)}
-        onClickMissed={event => console.debug("canvas click missed", event)}
-        onPointerLeave={event => console.debug("canvas pointer leave", event)}
-        onPointerEnter={event => console.debug("canvas pointer enter", event)}
-      >
-        {props.children}
-      </Canvas>
+      {props.children}
     </>
   )
 }
