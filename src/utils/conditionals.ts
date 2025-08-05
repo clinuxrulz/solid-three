@@ -1,4 +1,4 @@
-import { type Accessor, createEffect, createMemo } from "solid-js"
+import { type Accessor, createEffect, createMemo, type Resource } from "solid-js"
 
 export function check<
   T,
