@@ -23,6 +23,7 @@
    - [useFrame](#useframe)
    - [useLoader](#useloader)
 8. [Event Handling](#event-handling)
+   - [Controlling Raycasting with pointerEvents](#controlling-raycasting-with-pointerevents)
    - [Supported Events](#supported-events)
    - [Event Object](#event-object)
    - [Event Propagation](#event-propagation)
@@ -229,6 +230,7 @@ const AdvancedProps = () => {
 - **Deep nesting**: `material-emissive-intensity={0.5}` → `object.material.emissive.intensity = 0.5`
 
 These patterns automatically trigger `needsUpdate` flags on materials and geometries when necessary.
+
 
 ### Portal
 
@@ -449,6 +451,24 @@ export const App = () => {
 ## Event Handling
 
 `solid-three` provides a comprehensive event system that integrates `three.js` pointer and mouse events with `solid-js`' reactivity. Events are automatically handled through raycasting and support stopping propagation.
+
+### Controlling Raycasting with pointerEvents
+
+The `pointerEvents` prop controls whether an Object3D can be targeted by raycasting:
+
+- **pointerEvents** (`boolean`): When set to `false`, the object will not be hit by rays, but can still receive events through propagation from its descendants. Default is `true`.
+
+```tsx
+// Object won't be hit by rays but children can still be interactive
+<T.Group pointerEvents={false}>
+  <T.Mesh onClick={() => console.log("Child clicked!")}>
+    <T.BoxGeometry />
+    <T.MeshBasicMaterial />
+  </T.Mesh>
+</T.Group>
+```
+
+This is useful for creating invisible containers or optimizing performance by excluding objects from raycasting calculations.
 
 ### Supported Events
 
