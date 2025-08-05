@@ -452,28 +452,23 @@ export const App = () => {
 
 ### Supported Events
 
-**Mouse Events:**
-
 - `onClick` - Fired when clicking on an object
 - `onClickMissed` - Fired when a click doesn't hit any objects with onClick handlers
-- `onDoubleClick` - Fired when double-clicking on an object
-- `onDoubleClickMissed` - Fired when a double-click doesn't hit any objects with onDoubleClick handlers
 - `onContextMenu` - Fired when right-clicking on an object
 - `onContextMenuMissed` - Fired when a right-click doesn't hit any objects with onContextMenu handlers
+- `onDoubleClick` - Fired when double-clicking on an object
+- `onDoubleClickMissed` - Fired when a double-click doesn't hit any objects with onDoubleClick handlers
 - `onMouseDown` - Fired when mouse button is pressed
-- `onMouseUp` - Fired when mouse button is released
-- `onMouseMove` - Fired when mouse moves over object
 - `onMouseEnter` - Fired when mouse enters object
 - `onMouseLeave` - Fired when mouse leaves object
-- `onWheel` - Fired on mouse wheel events
-
-**Pointer Events:**
-
+- `onMouseMove` - Fired when mouse moves over object
+- `onMouseUp` - Fired when mouse button is released
 - `onPointerDown` - Fired when pointer is pressed
-- `onPointerUp` - Fired when pointer is released
-- `onPointerMove` - Fired when pointer moves
 - `onPointerEnter` - Fired when pointer enters object
 - `onPointerLeave` - Fired when pointer leaves object
+- `onPointerMove` - Fired when pointer moves
+- `onPointerUp` - Fired when pointer is released
+- `onWheel` - Fired on mouse wheel events
 
 ### Event Object
 
@@ -487,61 +482,6 @@ interface Event<T> {
   // Event control (only for stoppable events)
   stopped?: boolean // Whether propagation has been stopped
   stopPropagation?: () => void // Stop event propagation
-}
-```
-
-### Stoppable vs Non-Stoppable Events
-
-Not all events in solid-three can be stopped with `stopPropagation()`. This design choice aligns with DOM behavior and ensures predictable event handling.
-
-**Non-stoppable events:**
-- `onClickMissed`, `onDoubleClickMissed`, `onContextMenuMissed` - Missed events always fire for all registered handlers
-- `onMouseEnter`, `onPointerEnter` - Enter events always fire to maintain consistent hover state
-- `onMouseLeave`, `onPointerLeave` - Leave events always fire to ensure proper cleanup
-
-**Stoppable events:**
-- All other events (`onClick`, `onMouseMove`, `onPointerMove`, `onMouseDown`, etc.) can be stopped with `stopPropagation()`
-
-For non-stoppable events, the event object only contains the `nativeEvent` property:
-
-```tsx
-// Stoppable event
-onClick={e => {
-  e.stopPropagation() // ✓ Works
-  console.log(e.stopped) // ✓ Available
-}}
-
-// Non-stoppable event
-onClickMissed={e => {
-  e.stopPropagation() // ✗ Property doesn't exist
-  console.log(e.nativeEvent) // ✓ Available
-}}
-```
-
-**Example:**
-
-```tsx
-const InteractiveCube = () => {
-  const [hovered, setHovered] = createSignal(false)
-  const [clicked, setClicked] = createSignal(0)
-
-  return (
-    <T.Mesh
-      onClick={e => {
-        e.stopPropagation()
-        setClicked(c => c + 1)
-        console.log("Native event:", e.nativeEvent)
-      }}
-      onPointerMove={() => setHovered(true)}
-      onWheel={e => console.log("Wheel delta:", e.nativeEvent.deltaY)}
-    >
-      <T.BoxGeometry />
-      <T.MeshStandardMaterial
-        color={hovered() ? "hotpink" : "orange"}
-        emissive={clicked() > 0 ? "red" : "black"}
-      />
-    </T.Mesh>
-  )
 }
 ```
 
@@ -594,6 +534,63 @@ In this example, clicking the overlapping area would normally trigger events in 
 4. Canvas (root container)
 
 But with `stopPropagation()`, only the front mesh receives the event.
+
+### Stoppable vs Non-Stoppable Events
+
+Not all events in solid-three can be stopped with `stopPropagation()`. This design choice aligns with DOM behavior and ensures predictable event handling.
+
+**Non-stoppable events:**
+
+- `onClickMissed`, `onDoubleClickMissed`, `onContextMenuMissed` - [Missed events](#missed-events) always fire for all registered handlers
+- `onMouseEnter`, `onPointerEnter` - Enter events always fire to maintain consistent hover state ([hover events](#hover-events-entermoveleave))
+- `onMouseLeave`, `onPointerLeave` - Leave events always fire to ensure proper cleanup ([hover events](#hover-events-entermoveleave))
+
+**Stoppable events:**
+
+- All other events (`onClick`, `onMouseMove`, `onPointerMove`, `onMouseDown`, etc.) can be stopped with `stopPropagation()`
+
+For non-stoppable events, the event object only contains the `nativeEvent` property:
+
+```tsx
+// Stoppable event
+onClick={e => {
+  e.stopPropagation() // ✓ Works
+  console.log(e.stopped) // ✓ Available
+}}
+
+// Non-stoppable event
+onClickMissed={e => {
+  e.stopPropagation() // ✗ Property doesn't exist
+  console.log(e.nativeEvent) // ✓ Available
+}}
+```
+
+**Example:**
+
+```tsx
+const InteractiveCube = () => {
+  const [hovered, setHovered] = createSignal(false)
+  const [clicked, setClicked] = createSignal(0)
+
+  return (
+    <T.Mesh
+      onClick={e => {
+        e.stopPropagation()
+        setClicked(c => c + 1)
+        console.log("Native event:", e.nativeEvent)
+      }}
+      onPointerMove={() => setHovered(true)}
+      onWheel={e => console.log("Wheel delta:", e.nativeEvent.deltaY)}
+    >
+      <T.BoxGeometry />
+      <T.MeshStandardMaterial
+        color={hovered() ? "hotpink" : "orange"}
+        emissive={clicked() > 0 ? "red" : "black"}
+      />
+    </T.Mesh>
+  )
+}
+```
 
 ### Missed Events
 
