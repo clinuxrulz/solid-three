@@ -1,8 +1,8 @@
 import { A, Route, Router } from "@solidjs/router"
 import type { ParentProps } from "solid-js"
 import * as THREE from "three"
-import { extend, T } from "../src/index.ts"
-import { Basic } from "./examples/Basic.tsx"
+import { Canvas, extend, T } from "../src/index.ts"
+import { SimpleSolar } from "./examples/SimpleSolar.tsx"
 import "./index.css"
 
 extend(THREE)
@@ -22,17 +22,6 @@ function Layout(props: ParentProps) {
         }}
       >
         <A
-          href="/basic"
-          style={{
-            color: "white",
-            "text-decoration": "none",
-            padding: "5px 10px",
-            display: "block",
-          }}
-        >
-          Basic Example
-        </A>
-        <A
           href="/"
           style={{
             color: "white",
@@ -43,6 +32,17 @@ function Layout(props: ParentProps) {
         >
           Home
         </A>
+        <A
+          href="/simple-solar"
+          style={{
+            color: "white",
+            "text-decoration": "none",
+            padding: "5px 10px",
+            display: "block",
+          }}
+        >
+          Simple Solar
+        </A>
       </nav>
       {props.children}
     </>
@@ -52,14 +52,19 @@ function Layout(props: ParentProps) {
 export function App() {
   return (
     <Router root={Layout}>
-      <Route path="/basic" component={Basic} />
+      <Route path="/simple-solar" component={SimpleSolar} />
       <Route
         path="/"
         component={() => (
-          <T.Mesh>
-            <T.BoxGeometry />
-            <T.MeshBasicMaterial color="gray" />
-          </T.Mesh>
+          <Canvas
+            style={{ width: "100vw", height: "100vh" }}
+            camera={{ position: new THREE.Vector3(0, 0, 15) }}
+          >
+            <T.Mesh>
+              <T.BoxGeometry />
+              <T.MeshBasicMaterial color="gray" />
+            </T.Mesh>
+          </Canvas>
         )}
       />
     </Router>
