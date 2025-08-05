@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, mergeProps, onCleanup } from "solid-js"
-import { whenever } from "./conditionals.ts"
+import { when, whenEffect } from "./conditionals.ts"
 import { debounce as createDebounce } from "./debounce.ts"
 
 declare type ResizeObserverCallback = (entries: any[], observer: ResizeObserver) => void
@@ -77,7 +77,7 @@ export function useMeasure(options?: UseMeasureOptions) {
     return forceRefresh
   }
 
-  const forceRefresh = whenever(element, element => {
+  const forceRefresh = when(element, element => {
     const { left, top, width, height, bottom, right, x, y } =
       element.getBoundingClientRect() as unknown as Measure
 
@@ -114,24 +114,22 @@ export function useMeasure(options?: UseMeasureOptions) {
       onCleanup(() => globalThis.removeEventListener("scroll", onScroll, true))
     })
 
-    createEffect(
-      whenever(scrollContainers, scrollContainers => {
-        if (!config.scroll) return
+    whenEffect(scrollContainers, scrollContainers => {
+      if (!config.scroll) return
 
-        scrollContainers.forEach(scrollContainer =>
-          scrollContainer.addEventListener("scroll", onScroll, {
-            capture: true,
-            passive: true,
-          }),
-        )
+      scrollContainers.forEach(scrollContainer =>
+        scrollContainer.addEventListener("scroll", onScroll, {
+          capture: true,
+          passive: true,
+        }),
+      )
 
-        onCleanup(() => {
-          scrollContainers.forEach(element => {
-            element.removeEventListener("scroll", onScroll, true)
-          })
+      onCleanup(() => {
+        scrollContainers.forEach(element => {
+          element.removeEventListener("scroll", onScroll, true)
         })
-      }),
-    )
+      })
+    })
   })
 
   createEffect(() => {
@@ -140,13 +138,11 @@ export function useMeasure(options?: UseMeasureOptions) {
     globalThis.addEventListener("resize", onResize)
     onCleanup(() => globalThis.removeEventListener("resize", onResize))
 
-    createEffect(
-      whenever(element, element => {
-        const observer = new ResizeObserver(onResize)
-        observer.observe(element)
-        onCleanup(() => observer.disconnect())
-      }),
-    )
+    whenEffect(element, element => {
+      const observer = new ResizeObserver(onResize)
+      observer.observe(element)
+      onCleanup(() => observer.disconnect())
+    })
   })
 
   return {

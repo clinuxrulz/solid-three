@@ -23,7 +23,7 @@ import { isEventType } from "./create-events.ts"
 import { useThree } from "./hooks.ts"
 import { addToEventListeners, useCanvasProps } from "./internal-context.ts"
 import type { Instance } from "./types.ts"
-import { when } from "./utils/conditionals.ts"
+import { check } from "./utils/conditionals.ts"
 import { hasColorSpace } from "./utils/has-colorspace.ts"
 import { isInstance } from "./utils/is-instance.ts"
 import { resolve } from "./utils/resolve.ts"
@@ -44,7 +44,7 @@ import { resolve } from "./utils/resolve.ts"
  * @param props - An object containing the props to apply. This includes both direct properties
  *                and special properties like `ref` and `children`.
  */
-export function manageProps<T>(object: Accessor<Instance<T>>, props: any) {
+export function manageProps<T extends object>(object: Accessor<T>, props: any) {
   const [local, instanceProps] = splitProps(props, ["ref", "args", "object", "attach", "children"])
 
   // Assign ref
@@ -53,12 +53,14 @@ export function manageProps<T>(object: Accessor<Instance<T>>, props: any) {
     else local.ref = object()
   })
 
-  // Connect or attach children to THREE-instance
-  const childrenAccessor = children(() => props.children)
-  createRenderEffect(() =>
-    // @ts-expect-error TODO: fix type-error
-    manageSceneGraph(object(), childrenAccessor as unknown as Accessor<Instance>),
-  )
+  createRenderEffect(() => {
+    if ("children" in props) {
+      // Connect or attach children to THREE-instance
+      const childrenAccessor = children(() => props.children)
+      // @ts-expect-error TODO: fix type-error
+      manageSceneGraph(object(), childrenAccessor as unknown as Accessor<Instance>)
+    }
+  })
 
   // Apply the props to THREE-instance
   createRenderEffect(() => {
@@ -69,7 +71,7 @@ export function manageProps<T>(object: Accessor<Instance<T>>, props: any) {
 
   // Automatically dispose
   onCleanup(() =>
-    when(object, object => {
+    check(object, object => {
       if ("dispose" in object && typeof object.dispose === "function") {
         object.dispose()
       }
@@ -83,20 +85,22 @@ export function manageProps<T>(object: Accessor<Instance<T>>, props: any) {
 /*                                                                                */
 /**********************************************************************************/
 
-export function applyProps<T>(object: Instance<T>, props: any) {
-  const keys = Object.keys(props)
-  for (const key of keys) {
-    // An array of sub-property-keys:
-    // p.ex in <T.Mesh position={} position-x={}/> position's subKeys will be ['position-x']
-    const subKeys = keys.filter(_key => key !== _key && _key.includes(key))
-    createRenderEffect(() => {
-      applyProp(object, key, props[key])
-      // If property updates, apply its sub-properties immediately after.
-      for (const subKey of subKeys) {
-        applyProp(object, subKey, props[subKey])
-      }
-    })
-  }
+export function applyProps<T>(object: T, props: any) {
+  createRenderEffect(() => {
+    const keys = Object.keys(props)
+    for (const key of keys) {
+      // An array of sub-property-keys:
+      // p.ex in <T.Mesh position={} position-x={}/> position's subKeys will be ['position-x']
+      const subKeys = keys.filter(_key => key !== _key && _key.includes(key))
+      createRenderEffect(() => {
+        applyProp(object, key, props[key])
+        // If property updates, apply its sub-properties immediately after.
+        for (const subKey of subKeys) {
+          applyProp(object, subKey, props[subKey])
+        }
+      })
+    }
+  })
 }
 
 /**********************************************************************************/
@@ -127,7 +131,7 @@ const NEEDS_UPDATE = [
  * @param type - The property name, which can include nested paths indicated by hyphens.
  * @param value - The value to be assigned to the property; can be of any appropriate type.
  */
-export function applyProp<T>(source: Instance<T>, type: string, value: any) {
+export function applyProp<T>(source: T, type: string, value: any) {
   if (!source) {
     console.error("error while applying prop", source, type, value)
     return
@@ -140,7 +144,7 @@ export function applyProp<T>(source: Instance<T>, type: string, value: any) {
   if (type.indexOf("-") > -1) {
     const [property, ...rest] = type.split("-")
     // @ts-expect-error TODO: fix type-error
-    applyProp(source[property as string], rest.join("-"), value)
+    applyProp(source[property], rest.join("-"), value)
     return
   }
 
