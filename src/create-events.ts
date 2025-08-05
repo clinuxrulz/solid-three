@@ -108,12 +108,16 @@ function raycast<TNativeEvent extends MouseEvent | WheelEvent>(
   context.raycaster.setFromCamera(context.pointer, context.camera)
 
   const nodeSet = new Set<Object3D>()
+  const visitedSet = new Set<Object3D>()
   const stack = [...registry]
 
   // Collect all unique descendants of registry
   for (const object of stack) {
-    if (nodeSet.has(object)) continue
-    nodeSet.add(object)
+    if (visitedSet.has(object)) continue
+    visitedSet.add(object)
+    if (isInstance(object) && object[$S3C].props?.pointerEvents !== false) {
+      nodeSet.add(object)
+    }
     stack.push(...object.children)
   }
 

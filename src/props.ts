@@ -86,21 +86,19 @@ export function manageProps<T extends object>(object: Accessor<T>, props: any) {
 /**********************************************************************************/
 
 export function applyProps<T>(object: T, props: any) {
-  createRenderEffect(() => {
-    const keys = Object.keys(props)
-    for (const key of keys) {
-      // An array of sub-property-keys:
-      // p.ex in <T.Mesh position={} position-x={}/> position's subKeys will be ['position-x']
-      const subKeys = keys.filter(_key => key !== _key && _key.includes(key))
-      createRenderEffect(() => {
-        applyProp(object, key, props[key])
-        // If property updates, apply its sub-properties immediately after.
-        for (const subKey of subKeys) {
-          applyProp(object, subKey, props[subKey])
-        }
-      })
-    }
-  })
+  const keys = Object.keys(props)
+  for (const key of keys) {
+    // An array of sub-property-keys:
+    // p.ex in <T.Mesh position={} position-x={}/> position's subKeys will be ['position-x']
+    const subKeys = keys.filter(_key => key !== _key && _key.includes(key))
+    createRenderEffect(() => {
+      applyProp(object, key, props[key])
+      // If property updates, apply its sub-properties immediately after.
+      for (const subKey of subKeys) {
+        applyProp(object, subKey, props[subKey])
+      }
+    })
+  }
 }
 
 /**********************************************************************************/
