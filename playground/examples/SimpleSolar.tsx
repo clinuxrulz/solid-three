@@ -38,7 +38,7 @@ function OrbitPath(
 
   return (
     <T.Line
-      pointerEvents={false}
+      raycastable={false}
       ref={props.ref}
       onPointerMove={event => {
         event.stopPropagation()

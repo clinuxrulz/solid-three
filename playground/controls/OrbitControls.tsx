@@ -1,9 +1,9 @@
-import { createMemo, onCleanup, type Ref } from "solid-js"
+import { createEffect, createMemo, onCleanup, type Ref } from "solid-js"
 import type { Event } from "three"
 import { OrbitControls as ThreeOrbitControls } from "three-stdlib"
-import { useThree, type S3 } from "../../src/index.ts"
+import { useFrame, useThree, type S3 } from "../../src/index.ts"
 import { manageProps } from "../../src/props.ts"
-import { every, whenEffect } from "../../src/utils/conditionals.ts"
+import { whenEffect } from "../../src/utils/conditionals.ts"
 import { processProps } from "./process-props.ts"
 
 export type OrbitControlsProps = S3.ClassProps<typeof ThreeOrbitControls> & {
@@ -39,36 +39,46 @@ export function OrbitControls(props: OrbitControlsProps) {
     ],
   )
   const three = useThree()
-  const controls = createMemo(() => new ThreeOrbitControls(config.camera ?? three.camera))
-
-  whenEffect(controls, controls => {
-    controls.connect(props.domElement ?? three.gl.domElement)
-    onCleanup(() => controls.dispose())
+  const controls = createMemo<ThreeOrbitControls>(previous => {
+    previous?.dispose()
+    return new ThreeOrbitControls(config.camera ?? three.camera)
   })
 
-  whenEffect(
-    every(controls, () => config.onStart),
-    ([controls, callback]) => {
-      controls.addEventListener("start", callback)
-      onCleanup(() => controls.removeEventListener("start", callback))
-    },
-  )
-  whenEffect(
-    every(controls, () => config.onChange),
-    ([controls, callback]) => {
-      controls.addEventListener("change", callback)
-      onCleanup(() => controls.removeEventListener("change", callback))
-    },
-  )
-  whenEffect(
-    every(controls, () => config.onEnd),
-    ([controls, callback]) => {
-      controls.addEventListener("end", callback)
-      onCleanup(() => controls.removeEventListener("end", callback))
-    },
-  )
+  useFrame(() => controls().update())
+
+  whenEffect(controls, controls => controls.connect(props.domElement ?? three.gl.domElement))
+
+  createEffect(() => {
+    const callback = config.onStart
+    if (!callback) return
+    const _controls = controls()
+    _controls.addEventListener("start", callback)
+    onCleanup(() => _controls.removeEventListener("start", callback))
+  })
+  createEffect(() => {
+    const callback = config.onChange
+    if (!callback) return
+    const _controls = controls()
+    _controls.addEventListener("change", callback)
+    onCleanup(() => _controls.removeEventListener("change", callback))
+  })
+  createEffect(() => {
+    const callback = config.onEnd
+    if (!callback) return
+    const _controls = controls()
+    _controls.addEventListener("end", callback)
+    onCleanup(() => _controls.removeEventListener("end", callback))
+  })
 
   manageProps(controls, rest)
 
   return null!
+}
+
+function createEventListener() {
+  const callback = config.onStart
+  if (!callback) return
+  const _controls = controls()
+  _controls.addEventListener("start", callback)
+  onCleanup(() => _controls.removeEventListener("start", callback))
 }
