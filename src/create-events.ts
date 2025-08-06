@@ -115,7 +115,7 @@ function raycast<TNativeEvent extends MouseEvent | WheelEvent>(
   for (const object of stack) {
     if (visitedSet.has(object)) continue
     visitedSet.add(object)
-    if (isInstance(object) && object[$S3C].props?.pointerEvents !== false) {
+    if (isInstance(object) && object[$S3C].props?.raycastable !== false) {
       nodeSet.add(object)
     }
     stack.push(...object.children)

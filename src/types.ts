@@ -173,7 +173,7 @@ export type ClassProps<T> = Partial<
        * Prevents the Object3D from being cast by the ray.
        * Object3D can still receive events via propagation from its descendants.
        */
-      pointerEvents: boolean
+      raycastable: boolean
     } & EventHandlers
   >
 >
