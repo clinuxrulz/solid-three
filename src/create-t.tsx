@@ -39,7 +39,7 @@ export function createT<TCatalogue extends Record<string, unknown>>(catalogue: T
  * @param source - The constructor from which the component will be created.
  * @returns The created component.
  */
-function createThreeComponent<TSource>(source: TSource): Component<TSource | SolidThree.Elements> {
+function createThreeComponent<TSource>(source: TSource): Component<TSource> {
   return (props: any) => {
     const merged = mergeProps({ args: [] }, props)
     const memo = createMemo(() => {

@@ -1,9 +1,11 @@
 // use default export for jest.spyOn
-import { render } from "@solidjs/testing-library";
+import { render } from "@solidjs/testing-library"
+import * as THREE from "three"
+import { describe, expect, it } from "vitest"
+import { createT } from "../../src/index.ts"
+import { TestCanvas } from "../../src/testing/index.tsx"
 
-import { describe, expect, it } from "vitest";
-import { T } from "../../src/index.ts";
-import { TestCanvas } from "../../src/testing/index.tsx";
+const T = createT(THREE)
 
 describe("web Canvas", () => {
   it("should correctly mount", async () => {
@@ -11,32 +13,32 @@ describe("web Canvas", () => {
       <TestCanvas>
         <T.Group />
       </TestCanvas>
-    ));
+    ))
 
-    expect(renderer.container).toMatchSnapshot();
-  });
+    expect(renderer.container).toMatchSnapshot()
+  })
 
   it("should forward ref", async () => {
-    let ref: HTMLDivElement;
+    let ref: HTMLDivElement
 
     render(() => (
       <TestCanvas ref={ref}>
         <T.Group />
       </TestCanvas>
-    ));
+    ))
 
-    expect(ref!).toBeDefined();
-  });
+    expect(ref!).toBeDefined()
+  })
 
   it("should correctly unmount", async () => {
     let renderer = render(() => (
       <TestCanvas>
         <T.Group />
       </TestCanvas>
-    ));
+    ))
 
-    expect(() => renderer.unmount()).not.toThrow();
-  });
+    expect(() => renderer.unmount()).not.toThrow()
+  })
 
   // it("plays nice with react SSR", async () => {
   //   const useLayoutEffect = jest.spyOn(React, "useLayoutEffect");
@@ -51,4 +53,4 @@ describe("web Canvas", () => {
 
   //   expect(useLayoutEffect).not.toHaveBeenCalled();
   // });
-});
+})

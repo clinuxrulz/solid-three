@@ -1,8 +1,7 @@
 import { Object3D, type Intersection } from "three"
-import type { Context } from "vm"
 import type { CanvasProps } from "./canvas.tsx"
 import { $S3C } from "./constants.ts"
-import type { EventName, Instance, ThreeEvent } from "./types.ts"
+import type { Context, EventName, Instance, ThreeEvent } from "./types.ts"
 import { isInstance } from "./utils/is-instance.ts"
 
 const eventNameMap = {
@@ -59,15 +58,15 @@ export const isEventType = (type: string): type is EventName =>
 /**********************************************************************************/
 
 // Creates a `ThreeEvent` from the current `MouseEvent` | `WheelEvent`.
-function createThreeEvent<TEvent extends ThreeEvent>(
+function createThreeEvent<TEvent extends Event>(
   nativeEvent: TEvent,
   stoppable?: true,
 ): ThreeEvent<TEvent>
-function createThreeEvent<TEvent extends ThreeEvent>(
+function createThreeEvent<TEvent extends Event>(
   nativeEvent: TEvent,
   stoppable: false,
 ): ThreeEvent<TEvent, false>
-function createThreeEvent<TEvent extends ThreeEvent>(
+function createThreeEvent<TEvent extends Event>(
   nativeEvent: TEvent,
   stoppable = true,
 ): ThreeEvent<TEvent, boolean> {
@@ -348,6 +347,7 @@ function createDefaultEventRegistry(
 
         while (node && !event.stopped) {
           if (isInstance(object)) {
+            // @ts-expect-error TODO: fix type-error
             object[$S3C].props?.[type]?.(event)
           }
           node = node.parent
@@ -355,6 +355,7 @@ function createDefaultEventRegistry(
       }
 
       if (!event.stopped) {
+        // @ts-expect-error TODO: fix type-error
         props[type]?.(event)
       }
     },

@@ -543,8 +543,7 @@ describe("renderer", () => {
 
   it("will render components that are extended", async () => {
     const testExtend = async () => {
-      extend({ MyColor })
-
+      const T = createT({ MyColor })
       test(() => <T.MyColor args={[0x0000ff]} attach="color" />)
     }
 
@@ -676,7 +675,7 @@ describe("renderer", () => {
       return <T.Group />
     }
 
-    const Portal = () => {
+    const Group = () => {
       const three = useThree()
       portalState = three
 
@@ -687,7 +686,7 @@ describe("renderer", () => {
       <>
         <Normal />
         <Portal element={scene}>
-          <Portal />
+          <Group />
         </Portal>
       </>
     ))

@@ -119,12 +119,16 @@ type ThreeConstructors = ExtractConstructors<(typeof THREE)[keyof typeof THREE]>
 export type ThreeInstance = InstanceFromConstructor<ThreeConstructors>
 
 /** Instance of a given constructor augmented with `S3Metadata`. Defaults to `ThreeConstructor`*/
-export type Instance<T = ThreeConstructors> = InstanceFromConstructor<T> & {
+export type Instance<T extends object | unknown = ThreeConstructors> = Augment<
+  InstanceFromConstructor<T>
+>
+
+export type Augment<T> = T & {
   [$S3C]: Metadata<T>
 }
 
 /** Metadata of a `solid-three` instance. */
-export type Metadata<T extends object> = {
+export type Metadata<T extends object | unknown> = {
   props?: Props<InstanceFromConstructor<T>>
   children: Set<Instance>
 }
@@ -170,9 +174,8 @@ export type Props<T extends object | unknown> = Partial<
 export type Constructor<T = any> = new (...args: any[]) => T
 
 /** Extracts the instance from a constructor. */
-export type InstanceFromConstructor<TConstructor> = TConstructor extends Constructor<infer TObject>
-  ? TObject
-  : TConstructor
+export type InstanceFromConstructor<TConstructor extends object | unknown> =
+  TConstructor extends Constructor<infer TObject> ? TObject : TConstructor
 
 /** Omit function-properties from given type. */
 type OmitFunctionProperties<T> = { [K in keyof T]: T[K] extends Function ? never : K }[keyof T]

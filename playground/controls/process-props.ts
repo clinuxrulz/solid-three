@@ -1,6 +1,6 @@
 import { splitProps } from "solid-js"
 import { defaultProps } from "./default-props.ts"
-import type { KeyOfOptionals } from "./types.ts"
+import type { KeyOfOptionals } from "./type-utils.ts"
 
 export function processProps<
   const TProps,
