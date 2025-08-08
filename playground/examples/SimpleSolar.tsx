@@ -1,7 +1,7 @@
 import { createEffect, createMemo, createSignal, Show, type ParentProps, type Ref } from "solid-js"
 import type { Instance } from "src/types.ts"
 import * as THREE from "three"
-import { Canvas, createT, useFrame } from "../../src/index.ts"
+import { Canvas, createT, Primitive, useFrame } from "../../src/index.ts"
 import { OrbitControls } from "../controls/OrbitControls.tsx"
 
 const T = createT(THREE)
@@ -47,7 +47,7 @@ function OrbitPath(
       }}
     >
       <T.LineBasicMaterial color="#ffffff" />
-      <T.Primitive object={curve()} />
+      <Primitive object={curve()} />
       {props.children}
     </T.Line>
   )

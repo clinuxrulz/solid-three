@@ -231,7 +231,6 @@ const AdvancedProps = () => {
 
 These patterns automatically trigger `needsUpdate` flags on materials and geometries when necessary.
 
-
 ### Portal
 
 The `Portal` component allows you to place children outside the regular scene graph while maintaining reactive updates. This is useful for rendering objects into different scenes or bypassing the normal parent-child relationships.
@@ -734,9 +733,11 @@ type Camera = S3.CameraType // PerspectiveCamera | OrthographicCamera
 ### Props Types
 
 ```tsx
+import type { Mesh, MeshStandardMaterial } from "three"
+
 // Get props type for a specific `three.js` class
-type MeshProps = S3.Props<"Mesh">
-type MaterialProps = S3.Props<"MeshStandardMaterial">
+type MeshProps = S3.Props<Mesh>
+type MaterialProps = S3.Props<MeshStandardMaterial>
 
 // Using in components
 const MyMesh = (props: MeshProps) => {
