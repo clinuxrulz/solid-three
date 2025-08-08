@@ -74,11 +74,3 @@ export function OrbitControls(props: OrbitControlsProps) {
 
   return null!
 }
-
-function createEventListener() {
-  const callback = config.onStart
-  if (!callback) return
-  const _controls = controls()
-  _controls.addEventListener("start", callback)
-  onCleanup(() => _controls.removeEventListener("start", callback))
-}
