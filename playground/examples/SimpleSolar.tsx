@@ -1,8 +1,10 @@
 import { createEffect, createMemo, createSignal, Show, type ParentProps, type Ref } from "solid-js"
 import type { Instance } from "src/types.ts"
 import * as THREE from "three"
-import { Canvas, T, useFrame } from "../../src/index.ts"
+import { Canvas, createT, useFrame } from "../../src/index.ts"
 import { OrbitControls } from "../controls/OrbitControls.tsx"
+
+const T = createT(THREE)
 
 function OrbitPath(
   props: ParentProps<{

@@ -1,11 +1,11 @@
 import { A, Route, Router } from "@solidjs/router"
 import type { ParentProps } from "solid-js"
 import * as THREE from "three"
-import { Canvas, extend, T } from "../src/index.ts"
+import { Canvas, createT } from "../src/index.ts"
 import { SimpleSolar } from "./examples/SimpleSolar.tsx"
 import "./index.css"
 
-extend(THREE)
+const T = createT(THREE)
 
 function Layout(props: ParentProps) {
   return (

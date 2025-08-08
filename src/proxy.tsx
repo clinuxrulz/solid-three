@@ -1,84 +1,47 @@
 import { createMemo, type JSX, mergeProps } from "solid-js"
-import type * as THREE from "three"
 import { augment } from "./augment.ts"
 import { Portal, Primitive } from "./components.tsx"
 import { manageProps } from "./props.ts"
-import type { Constructor } from "./type-utils.ts"
 import type { Component } from "./types.ts"
 
 /**********************************************************************************/
 /*                                                                                */
-/*                                    Catalogue                                   */
+/*                                    Create T                                    */
 /*                                                                                */
 /**********************************************************************************/
 
-/**
- * Global catalogue object storing mappings from names to constructor representations.
- */
-const CATALOGUE = {}
+export function createT<TCatalogue extends Record<string, unknown>>(catalogue: TCatalogue) {
+  /** Predefined components that can be used directly within the system. */
+  const components: SolidThree.Components = {
+    Primitive,
+    Portal,
+  }
 
-/**
- * Predefined components that can be used directly within the system.
- */
-const COMPONENTS: SolidThree.Components = {
-  Primitive,
-  Portal,
-}
+  /** Cache for storing initialized components. */
+  const t_cache = new Map<string, Component<any>>(Object.entries(components))
 
-/**
- * Extends the global CATALOGUE with additional objects.
- *
- * @param objects - The objects to add to the catalogue.
- */
-export const extend = (
-  objects: Partial<
-    | {
-        [TKey in keyof SolidThree.Elements]: Constructor<SolidThree.Elements[TKey]>
+  return new Proxy<
+    {
+      [K in keyof TCatalogue]: Component<TCatalogue[K]>
+    } & SolidThree.Components
+  >({} as any, {
+    get: (_, name: string) => {
+      /* Create and memoize a wrapper component for the specified property. */
+      if (!t_cache.has(name)) {
+        /* Try and find a constructor within the THREE namespace. */
+        const constructor = catalogue[name]
+
+        /* If no constructor is found, return undefined. */
+        if (!constructor) return undefined
+
+        /* Otherwise, create and memoize a component for that constructor. */
+        t_cache.set(name, createThreeComponent(constructor))
       }
-    | typeof THREE
-  >,
-): void => void Object.assign(CATALOGUE, objects)
 
-/**********************************************************************************/
-/*                                                                                */
-/*                                        T                                       */
-/*                                                                                */
-/**********************************************************************************/
-
-/**
- * Cache for storing initialized components.
- */
-const T_CACHE = new Map<string, Component<any>>(Object.entries(COMPONENTS))
-
-/** Map given type to `Component` */
-type MapToS3Components<Source> = {
-  [K in keyof Source]: Component<Source[K]>
+      return t_cache.get(name)
+    },
+  })
 }
-
-/**
- * A proxy that provides on-demand creation and caching of `solid-three` components.
- * It represents a dynamic layer over the predefined components and any added through extend function.
- */
-export const T = new Proxy<
-  MapToS3Components<typeof THREE & SolidThree.Elements> & SolidThree.Components
->({} as any, {
-  get: (_, name: string) => {
-    /* Create and memoize a wrapper component for the specified property. */
-    if (!T_CACHE.has(name)) {
-      /* Try and find a constructor within the THREE namespace. */
-      // @ts-expect-error TODO: fix type-error
-      const constructor = CATALOGUE[name]
-
-      /* If no constructor is found, return undefined. */
-      if (!constructor) return undefined
-
-      /* Otherwise, create and memoize a component for that constructor. */
-      T_CACHE.set(name, createThreeComponent(constructor))
-    }
-
-    return T_CACHE.get(name)
-  },
-})
 
 /**
  * Creates a ThreeComponent instance for a given source constructor.
