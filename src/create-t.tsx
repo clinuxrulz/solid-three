@@ -24,7 +24,7 @@ export function createT<TCatalogue extends Record<string, unknown>>(catalogue: T
         if (!constructor) return undefined
 
         /* Otherwise, create and memoize a component for that constructor. */
-        cache.set(name, createThreeComponent(constructor))
+        cache.set(name, createTComponent(constructor))
       }
 
       return cache.get(name)
@@ -39,7 +39,7 @@ export function createT<TCatalogue extends Record<string, unknown>>(catalogue: T
  * @param source - The constructor from which the component will be created.
  * @returns The created component.
  */
-function createThreeComponent<TSource>(source: TSource): Component<TSource> {
+export function createTComponent<TSource>(source: TSource): Component<TSource> {
   return (props: any) => {
     const merged = mergeProps({ args: [] }, props)
     const memo = createMemo(() => {
