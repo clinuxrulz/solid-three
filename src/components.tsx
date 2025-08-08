@@ -4,7 +4,7 @@ import { augment } from "./augment.ts"
 import { threeContext, useThree } from "./hooks.ts"
 import { manageProps, manageSceneGraph } from "./props.ts"
 import { type InstanceFromConstructor } from "./type-utils.ts"
-import type { ClassProps, Instance, ThreeInstance } from "./types.ts"
+import type { Instance, Props, ThreeInstance } from "./types.ts"
 import { isInstance } from "./utils/is-instance.ts"
 import { withContext } from "./utils/with-context.ts"
 
@@ -48,7 +48,7 @@ export const Portal = (props: PortalProps) => {
   return null
 }
 
-type PrimitiveProps<T> = Omit<ClassProps<T>, "object" | "children" | "ref" | "args"> & {
+type PrimitiveProps<T> = Omit<Props<T>, "object" | "children" | "ref" | "args"> & {
   object: T
   children?: JSX.Element
   ref?: T | ((value: T) => void)

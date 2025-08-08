@@ -1,6 +1,5 @@
 import type { Accessor, JSX, Setter, Component as SolidComponent } from "solid-js"
 import type * as THREE from "three"
-import type { Portal, Primitive } from "./components.tsx"
 import type { $S3C } from "./constants.ts"
 import type {
   Constructor,
@@ -9,16 +8,6 @@ import type {
   Overwrite,
 } from "./type-utils.ts"
 import type { Measure } from "./utils/use-measure.ts"
-
-declare global {
-  namespace SolidThree {
-    interface Components {
-      Primitive: typeof Primitive
-      Portal: typeof Portal
-    }
-    interface Elements {}
-  }
-}
 
 interface ContextElements {
   camera: Instance<CameraType>
@@ -132,7 +121,6 @@ export type Matrix4 = Representation<THREE.Matrix4>
 type ExtractConstructors<T> = T extends Constructor ? T : never
 /** All constructors within the `THREE` namespace */
 type ThreeConstructors = ExtractConstructors<(typeof THREE)[keyof typeof THREE]>
-
 /** Generic instance of a given `Constructor`. */
 export type ThreeInstance = InstanceFromConstructor<ThreeConstructors>
 
@@ -143,12 +131,12 @@ export type Instance<T = ThreeConstructors> = InstanceFromConstructor<T> & {
 
 /** Metadata of a `solid-three` instance. */
 export type Metadata<T> = {
-  props?: ClassProps<InstanceFromConstructor<T>>
+  props?: Props<InstanceFromConstructor<T>>
   children: Set<Instance>
 }
 
 /** Generic `solid-three` component. */
-export type Component<T> = SolidComponent<ClassProps<T>>
+export type Component<T> = SolidComponent<Props<T>>
 
 /** Maps properties of given type to their `solid-three` representations. */
 type MapToRepresentation<T> = {
@@ -156,7 +144,7 @@ type MapToRepresentation<T> = {
 }
 
 /** Generic `solid-three` props of a given class. */
-export type ClassProps<T> = Partial<
+export type Props<T> = Partial<
   Overwrite<
     MapToRepresentation<InstanceFromConstructor<T>>,
     {
@@ -177,11 +165,3 @@ export type ClassProps<T> = Partial<
     } & EventHandlers
   >
 >
-
-/** Generic `solid-three` props of a given type. */
-export type Props<T extends keyof typeof THREE | keyof SolidThree.Elements> =
-  T extends keyof typeof THREE
-    ? ClassProps<(typeof THREE)[T]>
-    : T extends keyof SolidThree.Elements
-    ? ClassProps<SolidThree.Elements[T]>
-    : never

@@ -1,6 +1,5 @@
 import { createMemo, type JSX, mergeProps } from "solid-js"
 import { augment } from "./augment.ts"
-import { Portal, Primitive } from "./components.tsx"
 import { manageProps } from "./props.ts"
 import type { Component } from "./types.ts"
 
@@ -11,23 +10,13 @@ import type { Component } from "./types.ts"
 /**********************************************************************************/
 
 export function createT<TCatalogue extends Record<string, unknown>>(catalogue: TCatalogue) {
-  /** Predefined components that can be used directly within the system. */
-  const components: SolidThree.Components = {
-    Primitive,
-    Portal,
-  }
-
-  /** Cache for storing initialized components. */
-  const t_cache = new Map<string, Component<any>>(Object.entries(components))
-
-  return new Proxy<
-    {
-      [K in keyof TCatalogue]: Component<TCatalogue[K]>
-    } & SolidThree.Components
-  >({} as any, {
+  const cache = new Map<string, Component<any>>()
+  return new Proxy<{
+    [K in keyof TCatalogue]: Component<TCatalogue[K]>
+  }>({} as any, {
     get: (_, name: string) => {
       /* Create and memoize a wrapper component for the specified property. */
-      if (!t_cache.has(name)) {
+      if (!cache.has(name)) {
         /* Try and find a constructor within the THREE namespace. */
         const constructor = catalogue[name]
 
@@ -35,10 +24,10 @@ export function createT<TCatalogue extends Record<string, unknown>>(catalogue: T
         if (!constructor) return undefined
 
         /* Otherwise, create and memoize a component for that constructor. */
-        t_cache.set(name, createThreeComponent(constructor))
+        cache.set(name, createThreeComponent(constructor))
       }
 
-      return t_cache.get(name)
+      return cache.get(name)
     },
   })
 }

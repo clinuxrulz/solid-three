@@ -1,4 +1,5 @@
 export { Canvas, type CanvasProps } from "./canvas.tsx"
+export { Portal, Primitive } from "./components.tsx"
 export { $S3C } from "./constants.ts"
 export { useFrame, useLoader, useThree } from "./hooks.ts"
 export { applyProps } from "./props.ts"

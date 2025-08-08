@@ -6,7 +6,7 @@ import { manageProps } from "../../src/props.ts"
 import { whenEffect } from "../../src/utils/conditionals.ts"
 import { processProps } from "./process-props.ts"
 
-export type OrbitControlsProps = S3.ClassProps<typeof ThreeOrbitControls> & {
+export interface OrbitControlsProps extends S3.Props<typeof ThreeOrbitControls> {
   ref?: Ref<ThreeOrbitControls>
   camera?: S3.CameraType
   domElement?: HTMLElement
