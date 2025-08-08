@@ -1,15 +1,15 @@
 import {
   type ComponentProps,
-  For,
-  Show,
   createRenderEffect,
   createSignal,
+  For,
   onCleanup,
   onMount,
+  Show,
 } from "solid-js"
 import * as THREE from "three"
 import { beforeAll, describe, expect, it, vi } from "vitest"
-import { T, extend, useFrame, useThree } from "../../src/index.ts"
+import { createT, Portal, Primitive, useFrame, useThree } from "../../src/index.ts"
 import { test } from "../../src/testing/index.tsx"
 import type { Context, Instance } from "../../src/types.ts"
 
@@ -43,18 +43,7 @@ class MyColor extends THREE.Color {
     super(col)
   }
 }
-
-declare global {
-  module SolidThree {
-    interface Elements {
-      HasObject3dMember: HasObject3dMember
-      HasObject3dMethods: HasObject3dMethods
-      MyColor: MyColor
-    }
-  }
-}
-
-extend({ HasObject3dMember, HasObject3dMethods })
+const T = createT({ ...THREE, HasObject3dMember, HasObject3dMethods, MyColor })
 
 beforeAll(() => {
   Object.defineProperty(globalThis, "devicePixelRatio", {
@@ -366,9 +355,9 @@ describe("renderer", () => {
     const object2 = new THREE.Group()
 
     const Test = (props: { first?: boolean }) => (
-      <T.Primitive object={props.first ? object1 : object2} onPointerMove={() => null}>
+      <Primitive object={props.first ? object1 : object2} onPointerMove={() => null}>
         <T.Group />
-      </T.Primitive>
+      </Primitive>
     )
 
     const state = test(() => <Test first={first()} />)
@@ -409,9 +398,9 @@ describe("renderer", () => {
     const o2 = new THREE.Group()
 
     const Test = (props: { n: number }) => (
-      <T.Primitive object={props.n === 1 ? o1 : o2}>
+      <Primitive object={props.n === 1 ? o1 : o2}>
         <T.Group attach="test" />
-      </T.Primitive>
+      </Primitive>
     )
 
     const state = test(() => <Test n={n()} />)
@@ -438,7 +427,7 @@ describe("renderer", () => {
 
     const Test = (props: { array: THREE.Group[] }) => (
       <>
-        <For each={props.array}>{group => <T.Primitive object={group} />}</For>
+        <For each={props.array}>{group => <Primitive object={group} />}</For>
       </>
     )
 
@@ -697,9 +686,9 @@ describe("renderer", () => {
     test(() => (
       <>
         <Normal />
-        <T.Portal element={scene}>
+        <Portal element={scene}>
           <Portal />
-        </T.Portal>
+        </Portal>
       </>
     ))
 
@@ -721,9 +710,9 @@ describe("renderer", () => {
           <Show when={group()}>
             {group => {
               return (
-                <T.Portal element={group()}>
+                <Portal element={group()}>
                   <T.Mesh />
-                </T.Portal>
+                </Portal>
               )
             }}
           </Show>
@@ -835,11 +824,11 @@ describe("renderer", () => {
     let child: THREE.Object3D = null!
     let attachedChild: THREE.Object3D = null!
 
-    const Test = (props: ComponentProps<typeof T.Primitive>) => (
-      <T.Primitive {...props} ref={ref}>
+    const Test = (props: ComponentProps<typeof Primitive>) => (
+      <Primitive {...props} ref={ref}>
         <T.Object3D ref={child} />
         <T.Object3D ref={attachedChild} attach="userData-attach" />
-      </T.Primitive>
+      </Primitive>
     )
 
     const object1 = new THREE.Object3D()

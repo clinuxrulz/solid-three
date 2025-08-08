@@ -1,29 +1,31 @@
-import { fireEvent } from "@solidjs/testing-library";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent } from "@solidjs/testing-library"
+import { Show, createSignal } from "solid-js"
+import * as THREE from "three"
+import { describe, expect, it, vi } from "vitest"
+import { createT } from "../../src/index.ts"
+import { test } from "../../src/testing/index.tsx"
 
-import { Show, createSignal } from "solid-js";
-import { T } from "../../src/index.ts";
-import { test } from "../../src/testing/index.tsx";
+const T = createT(THREE)
 
 describe("events", () => {
   it("can handle onPointerDown", async () => {
-    const handlePointerDown = vi.fn();
+    const handlePointerDown = vi.fn()
 
     const { canvas, waitTillNextFrame } = test(() => (
       <T.Mesh onMouseDown={handlePointerDown}>
         <T.BoxGeometry args={[2, 2]} />
         <T.MeshBasicMaterial />
       </T.Mesh>
-    ));
+    ))
 
-    const evt = new Event("mousedown");
-    Object.defineProperty(evt, "offsetX", { get: () => 640 });
-    Object.defineProperty(evt, "offsetY", { get: () => 400 });
+    const evt = new Event("mousedown")
+    Object.defineProperty(evt, "offsetX", { get: () => 640 })
+    Object.defineProperty(evt, "offsetY", { get: () => 400 })
 
-    fireEvent(canvas, evt);
+    fireEvent(canvas, evt)
 
-    expect(handlePointerDown).toHaveBeenCalled();
-  });
+    expect(handlePointerDown).toHaveBeenCalled()
+  })
 
   // TODO:  implement onPointerMissed-api
   // NOTE:  unsure if/how we should implement onPointerMissed
@@ -139,9 +141,9 @@ describe("events", () => {
   // });
 
   it("can handle onPointerMove", async () => {
-    const handlePointerMove = vi.fn();
-    const handlePointerEnter = vi.fn();
-    const handlePointerOut = vi.fn();
+    const handlePointerMove = vi.fn()
+    const handlePointerEnter = vi.fn()
+    const handlePointerOut = vi.fn()
 
     const { canvas } = test(() => (
       <T.Mesh
@@ -152,31 +154,31 @@ describe("events", () => {
         <T.BoxGeometry args={[2, 2]} />
         <T.MeshBasicMaterial />
       </T.Mesh>
-    ));
+    ))
 
-    const evt1 = new Event("pointermove");
-    Object.defineProperty(evt1, "offsetX", { get: () => 577 });
-    Object.defineProperty(evt1, "offsetY", { get: () => 480 });
+    const evt1 = new Event("pointermove")
+    Object.defineProperty(evt1, "offsetX", { get: () => 577 })
+    Object.defineProperty(evt1, "offsetY", { get: () => 480 })
 
-    fireEvent(canvas, evt1);
+    fireEvent(canvas, evt1)
 
-    expect(handlePointerMove).toHaveBeenCalled();
-    expect(handlePointerEnter).toHaveBeenCalled();
+    expect(handlePointerMove).toHaveBeenCalled()
+    expect(handlePointerEnter).toHaveBeenCalled()
 
-    const evt2 = new Event("pointermove");
-    Object.defineProperty(evt2, "offsetX", { get: () => 0 });
-    Object.defineProperty(evt2, "offsetY", { get: () => 0 });
+    const evt2 = new Event("pointermove")
+    Object.defineProperty(evt2, "offsetX", { get: () => 0 })
+    Object.defineProperty(evt2, "offsetY", { get: () => 0 })
 
-    fireEvent(canvas, evt2);
+    fireEvent(canvas, evt2)
 
-    expect(handlePointerOut).toHaveBeenCalled();
-  });
+    expect(handlePointerOut).toHaveBeenCalled()
+  })
 
   it("should handle stopPropogation", async () => {
     const handlePointerEnter = vi.fn().mockImplementation(e => {
-      expect(() => e.stopPropagation()).not.toThrow();
-    });
-    const handlePointerLeave = vi.fn();
+      expect(() => e.stopPropagation()).not.toThrow()
+    })
+    const handlePointerLeave = vi.fn()
 
     const { canvas } = test(() => (
       <>
@@ -189,28 +191,28 @@ describe("events", () => {
           <T.MeshBasicMaterial />
         </T.Mesh>
       </>
-    ));
+    ))
 
-    const evt1 = new Event("pointermove");
-    Object.defineProperty(evt1, "offsetX", { get: () => 577 });
-    Object.defineProperty(evt1, "offsetY", { get: () => 480 });
+    const evt1 = new Event("pointermove")
+    Object.defineProperty(evt1, "offsetX", { get: () => 577 })
+    Object.defineProperty(evt1, "offsetY", { get: () => 480 })
 
-    fireEvent(canvas, evt1);
+    fireEvent(canvas, evt1)
 
-    expect(handlePointerEnter).toHaveBeenCalled();
+    expect(handlePointerEnter).toHaveBeenCalled()
 
-    const evt2 = new Event("pointermove");
-    Object.defineProperty(evt2, "offsetX", { get: () => 0 });
-    Object.defineProperty(evt2, "offsetY", { get: () => 0 });
+    const evt2 = new Event("pointermove")
+    Object.defineProperty(evt2, "offsetX", { get: () => 0 })
+    Object.defineProperty(evt2, "offsetY", { get: () => 0 })
 
-    fireEvent(canvas, evt2);
+    fireEvent(canvas, evt2)
 
-    expect(handlePointerLeave).toHaveBeenCalled();
-  });
+    expect(handlePointerLeave).toHaveBeenCalled()
+  })
 
   it("should handle stopPropagation on click events", async () => {
-    const handleClickFront = vi.fn(e => e.stopPropagation());
-    const handleClickRear = vi.fn();
+    const handleClickFront = vi.fn(e => e.stopPropagation())
+    const handleClickRear = vi.fn()
 
     const { canvas } = test(() => (
       <>
@@ -223,42 +225,42 @@ describe("events", () => {
           <T.MeshBasicMaterial />
         </T.Mesh>
       </>
-    ));
+    ))
 
-    const down = new Event("pointerdown");
-    Object.defineProperty(down, "offsetX", { get: () => 577 });
-    Object.defineProperty(down, "offsetY", { get: () => 480 });
+    const down = new Event("pointerdown")
+    Object.defineProperty(down, "offsetX", { get: () => 577 })
+    Object.defineProperty(down, "offsetY", { get: () => 480 })
 
-    fireEvent(canvas, down);
+    fireEvent(canvas, down)
 
-    const up = new Event("pointerup");
-    Object.defineProperty(up, "offsetX", { get: () => 577 });
-    Object.defineProperty(up, "offsetY", { get: () => 480 });
+    const up = new Event("pointerup")
+    Object.defineProperty(up, "offsetX", { get: () => 577 })
+    Object.defineProperty(up, "offsetY", { get: () => 480 })
 
-    fireEvent(canvas, up);
+    fireEvent(canvas, up)
 
-    const event = new Event("click");
-    Object.defineProperty(event, "offsetX", { get: () => 577 });
-    Object.defineProperty(event, "offsetY", { get: () => 480 });
+    const event = new Event("click")
+    Object.defineProperty(event, "offsetX", { get: () => 577 })
+    Object.defineProperty(event, "offsetY", { get: () => 480 })
 
-    fireEvent(canvas, event);
+    fireEvent(canvas, event)
 
-    expect(handleClickFront).toHaveBeenCalled();
-    expect(handleClickRear).not.toHaveBeenCalled();
-  });
+    expect(handleClickFront).toHaveBeenCalled()
+    expect(handleClickRear).not.toHaveBeenCalled()
+  })
 
   // TODO:  implement pointer capture
 
   describe("web pointer capture", () => {
-    const handlePointerMove = vi.fn();
+    const handlePointerMove = vi.fn()
     const handlePointerDown = vi.fn(ev => {
-      (ev.nativeEvent.target as any).setPointerCapture(ev.pointerId);
-    });
+      ;(ev.nativeEvent.target as any).setPointerCapture(ev.pointerId)
+    })
     const handlePointerUp = vi.fn(ev =>
       (ev.nativeEvent.target as any).releasePointerCapture(ev.pointerId),
-    );
-    const handlePointerEnter = vi.fn();
-    const handlePointerLeave = vi.fn();
+    )
+    const handlePointerEnter = vi.fn()
+    const handlePointerLeave = vi.fn()
 
     /* This component lets us unmount the event-handling object */
     function PointerCaptureTest(props: { hasMesh: boolean; manualRelease?: boolean }) {
@@ -275,103 +277,103 @@ describe("events", () => {
             <T.MeshBasicMaterial />
           </T.Mesh>
         </Show>
-      );
+      )
     }
 
-    const pointerId = 1234;
+    const pointerId = 1234
 
     it("should release when the capture target is unmounted", async () => {
-      const [hasMesh, setHasMesh] = createSignal(true);
+      const [hasMesh, setHasMesh] = createSignal(true)
 
       // S3:   we do not have a replacement for rerender
-      const { canvas } = test(() => <PointerCaptureTest hasMesh={hasMesh()} />);
+      const { canvas } = test(() => <PointerCaptureTest hasMesh={hasMesh()} />)
 
-      canvas.setPointerCapture = vi.fn();
-      canvas.releasePointerCapture = vi.fn();
+      canvas.setPointerCapture = vi.fn()
+      canvas.releasePointerCapture = vi.fn()
 
       // @ts-expect-error TODO: fix type-error
-      const down = new Event("pointerdown", { pointerId });
-      Object.defineProperty(down, "offsetX", { get: () => 577 });
-      Object.defineProperty(down, "offsetY", { get: () => 480 });
+      const down = new Event("pointerdown", { pointerId })
+      Object.defineProperty(down, "offsetX", { get: () => 577 })
+      Object.defineProperty(down, "offsetY", { get: () => 480 })
 
       /* testing-utils/react's fireEvent wraps the event like React does, so it doesn't match how our event handlers are called in production, so we call dispatchEvent directly. */
-      canvas.dispatchEvent(down);
+      canvas.dispatchEvent(down)
 
       /* This should have captured the DOM pointer */
-      expect(handlePointerDown).toHaveBeenCalledTimes(1);
-      expect(canvas.setPointerCapture).toHaveBeenCalledWith(pointerId);
-      expect(canvas.releasePointerCapture).not.toHaveBeenCalled();
+      expect(handlePointerDown).toHaveBeenCalledTimes(1)
+      expect(canvas.setPointerCapture).toHaveBeenCalledWith(pointerId)
+      expect(canvas.releasePointerCapture).not.toHaveBeenCalled()
 
       /* Now remove the T.Mesh */
-      setHasMesh(false);
+      setHasMesh(false)
 
-      expect(canvas.releasePointerCapture).toHaveBeenCalledWith(pointerId);
+      expect(canvas.releasePointerCapture).toHaveBeenCalledWith(pointerId)
 
       // @ts-expect-error TODO: fix type-error
-      const move = new Event("pointerdown", { pointerId });
-      Object.defineProperty(move, "offsetX", { get: () => 577 });
-      Object.defineProperty(move, "offsetY", { get: () => 480 });
+      const move = new Event("pointerdown", { pointerId })
+      Object.defineProperty(move, "offsetX", { get: () => 577 })
+      Object.defineProperty(move, "offsetY", { get: () => 480 })
 
-      canvas.dispatchEvent(move);
+      canvas.dispatchEvent(move)
 
       /* There should now be no pointer capture */
-      expect(handlePointerMove).not.toHaveBeenCalled();
-    });
+      expect(handlePointerMove).not.toHaveBeenCalled()
+    })
 
     it("should not leave when captured", async () => {
-      const { canvas } = test(() => <PointerCaptureTest hasMesh manualRelease />);
+      const { canvas } = test(() => <PointerCaptureTest hasMesh manualRelease />)
 
-      canvas.setPointerCapture = vi.fn();
-      canvas.releasePointerCapture = vi.fn();
-
-      // @ts-expect-error TODO: fix type-error
-      const moveIn = new Event("pointermove", { pointerId });
-      Object.defineProperty(moveIn, "offsetX", { get: () => 577 });
-      Object.defineProperty(moveIn, "offsetY", { get: () => 480 });
+      canvas.setPointerCapture = vi.fn()
+      canvas.releasePointerCapture = vi.fn()
 
       // @ts-expect-error TODO: fix type-error
-      const moveOut = new Event("pointermove", { pointerId });
-      Object.defineProperty(moveOut, "offsetX", { get: () => -10000 });
-      Object.defineProperty(moveOut, "offsetY", { get: () => -10000 });
+      const moveIn = new Event("pointermove", { pointerId })
+      Object.defineProperty(moveIn, "offsetX", { get: () => 577 })
+      Object.defineProperty(moveIn, "offsetY", { get: () => 480 })
+
+      // @ts-expect-error TODO: fix type-error
+      const moveOut = new Event("pointermove", { pointerId })
+      Object.defineProperty(moveOut, "offsetX", { get: () => -10000 })
+      Object.defineProperty(moveOut, "offsetY", { get: () => -10000 })
 
       /* testing-utils/react's fireEvent wraps the event like React does, so it doesn't match how our event handlers are called in production, so we call dispatchEvent directly. */
-      canvas.dispatchEvent(moveIn);
-      expect(handlePointerEnter).toHaveBeenCalledTimes(1);
-      expect(handlePointerMove).toHaveBeenCalledTimes(1);
+      canvas.dispatchEvent(moveIn)
+      expect(handlePointerEnter).toHaveBeenCalledTimes(1)
+      expect(handlePointerMove).toHaveBeenCalledTimes(1)
 
       // @ts-expect-error TODO: fix type-error
-      const down = new Event("pointerdown", { pointerId });
-      Object.defineProperty(down, "offsetX", { get: () => 577 });
-      Object.defineProperty(down, "offsetY", { get: () => 480 });
+      const down = new Event("pointerdown", { pointerId })
+      Object.defineProperty(down, "offsetX", { get: () => 577 })
+      Object.defineProperty(down, "offsetY", { get: () => 480 })
 
-      canvas.dispatchEvent(down);
+      canvas.dispatchEvent(down)
 
       // If we move the pointer now, when it is captured, it should raise the onPointerMove event even though the pointer is not over the element,
       // and NOT raise the onPointerLeave event.
-      canvas.dispatchEvent(moveOut);
-      expect(handlePointerMove).toHaveBeenCalledTimes(2);
-      expect(handlePointerLeave).not.toHaveBeenCalled();
+      canvas.dispatchEvent(moveOut)
+      expect(handlePointerMove).toHaveBeenCalledTimes(2)
+      expect(handlePointerLeave).not.toHaveBeenCalled()
 
-      canvas.dispatchEvent(moveIn);
-      expect(handlePointerMove).toHaveBeenCalledTimes(3);
+      canvas.dispatchEvent(moveIn)
+      expect(handlePointerMove).toHaveBeenCalledTimes(3)
 
       // @ts-expect-error TODO: fix type-error
-      const up = new Event("pointerup", { pointerId });
-      Object.defineProperty(up, "offsetX", { get: () => 577 });
-      Object.defineProperty(up, "offsetY", { get: () => 480 });
+      const up = new Event("pointerup", { pointerId })
+      Object.defineProperty(up, "offsetX", { get: () => 577 })
+      Object.defineProperty(up, "offsetY", { get: () => 480 })
       // @ts-expect-error TODO: fix type-error
-      const lostpointercapture = new Event("lostpointercapture", { pointerId });
+      const lostpointercapture = new Event("lostpointercapture", { pointerId })
 
-      canvas.dispatchEvent(up);
-      canvas.dispatchEvent(lostpointercapture);
+      canvas.dispatchEvent(up)
+      canvas.dispatchEvent(lostpointercapture)
 
       // The pointer is still over the element, so onPointerLeave should not have been called.
-      expect(handlePointerLeave).not.toHaveBeenCalled();
+      expect(handlePointerLeave).not.toHaveBeenCalled()
 
       // The element pointer should no longer be captured, so moving it away should call onPointerLeave.
-      canvas.dispatchEvent(moveOut);
-      expect(handlePointerEnter).toHaveBeenCalledTimes(1);
-      expect(handlePointerLeave).toHaveBeenCalledTimes(1);
-    });
-  });
-});
+      canvas.dispatchEvent(moveOut)
+      expect(handlePointerEnter).toHaveBeenCalledTimes(1)
+      expect(handlePointerLeave).toHaveBeenCalledTimes(1)
+    })
+  })
+})
