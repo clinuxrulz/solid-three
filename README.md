@@ -6,38 +6,6 @@
 
 `solid-three` is a port of [react-three-fiber](https://github.com/pmndrs/react-three-fiber) to [solid-js](https://www.solidjs.com/). It allows you to declaratively construct a [Three.js](https://threejs.org/) scene, with reactive primitives, just as you would construct a DOM tree in `solid-js`.
 
-## Table of Contents
-
-1. [Features](#features)
-2. [Differences from React-Three-Fiber](#differences-from-react-three-fiber)
-3. [Installation](#installation)
-4. [Setup with extend()](#setup-with-extend)
-5. [Basic Usage](#basic-usage)
-6. [Components](#components)
-   - [Canvas](#canvas)
-   - [Primitive Components (`<T/>`)](#primitive-components-t)
-   - [Portal](#portal)
-   - [Primitive](#primitive)
-7. [Hooks](#hooks)
-   - [useThree](#usethree)
-   - [useFrame](#useframe)
-   - [useLoader](#useloader)
-8. [Event Handling](#event-handling)
-   - [Controlling Raycasting with pointerEvents](#controlling-raycasting-with-pointerevents)
-   - [Supported Events](#supported-events)
-   - [Event Object](#event-object)
-   - [Event Propagation](#event-propagation)
-   - [Missed Events](#missed-events)
-   - [Hover Events](#hover-events)
-9. [TypeScript Support](#typescript-support)
-10. [Performance Optimization](#performance-optimization)
-11. [Testing](#testing)
-12. [API Reference](#api-reference)
-13. [Contributing](#contributing)
-14. [License](#license)
-
-## Features
-
 - **Declarative `three.js` Components**: Utilize `three.js` objects as JSX components.
 - **Reactive Prop Updates**: Properties of 3D objects update reactively, promoting efficient re-renders.
 - **Integrated Animation Loop**: `useFrame` hook allows for easy animations.
@@ -45,16 +13,33 @@
 - **Extensible and Customizable**: Easily extendable with additional `three.js` entities or custom behaviors.
 - **Optimized for `solid-js`**: Leverages `solid-js`' fine-grained reactivity for optimal performance.
 
-## Differences from React-Three-Fiber
+## Table of Contents
 
-While `solid-three` is heavily inspired by– and initially shared a lot of code with– react-three-fiber, there are currently several key differences:
-
-- **No `performance` Prop**: The `Canvas` component does not support a `performance` prop as optimization is handled differently in `solid-js`.
-- **Simplified Event Objects**: The event object provided to event handlers is more minimalistic.
-- **Minimal `useThree` Hook**: Returns a more concise context object, focusing on essential properties.
-- **Missed Events**: Implements `onClickMissed`, `onDoubleClickMissed`, and `onContextMenuMissed` for handling events on empty space or stopped propagation.
-- **TODO**:
-  - **No Pointer Capture**: Pointer events do not support pointer capture management.
+1. [Installation](#installation)
+2. [Basic Usage](#basic-usage)
+3. [Components](#components)
+   - [Canvas](#canvas)
+   - [T Namespace (`<T/>`)](#t-namespace-t)
+   - [Portal](#portal)
+   - [Primitive](#primitive)
+4. [Hooks](#hooks)
+   - [useThree](#usethree)
+   - [useFrame](#useframe)
+   - [useLoader](#useloader)
+5. [Event Handling](#event-handling)
+   - [Controlling Raycasting with pointerEvents](#controlling-raycasting-with-pointerevents)
+   - [Supported Events](#supported-events)
+   - [Event Object](#event-object)
+   - [Event Propagation](#event-propagation)
+   - [Missed Events](#missed-events)
+   - [Hover Events](#hover-events)
+6. [TypeScript Support](#typescript-support)
+7. [Performance Optimization](#performance-optimization)
+8. [Testing](#testing)
+9. [API Reference](#api-reference)
+10. [Differences from React-Three-Fiber](#differences-from-react-three-fiber)
+11. [Contributing](#contributing)
+12. [License](#license)
 
 ## Installation
 
@@ -72,43 +57,20 @@ yarn add solid-three three
 
 Ensure that `solid-js` is installed in your environment, as it is a peer dependency of `solid-three`.
 
-## Setup with `extend()`
-
-Before using solid-three components, you must register THREE.js objects with the `extend()` function:
-
-```tsx
-import { extend } from "solid-three"
-import * as THREE from "three"
-
-// Register all THREE.js objects (required step)
-extend(THREE)
-```
-
-This registration step is required and must be done before rendering any `<T.*>` components. You can also register specific objects, allowing for treeshaking:
-
-```tsx
-import { extend } from "solid-three"
-import { Mesh, BoxGeometry, MeshBasicMaterial } from "three"
-
-// Register only specific objects
-extend({ Mesh, BoxGeometry, MeshBasicMaterial })
-```
-
 ## Basic Usage
 
 Here's a simple example to get you started:
 
 ```tsx
 import { Component, createSignal } from "solid-js"
-import { Canvas, T, extend, useFrame } from "solid-three"
-import { Mesh } from "three"
+import { Canvas, createT, useFrame } from "solid-three"
 import * as THREE from "three"
 
-// Required: Register THREE.js objects before using them
-extend(THREE)
+// Create the T namespace with THREE.js objects
+const T = createT(THREE)
 
 const Box = () => {
-  let mesh: Mesh | undefined
+  let mesh: THREE.Mesh | undefined
   const [hovered, setHovered] = createSignal(false)
 
   useFrame(() => (mesh!.rotation.y += 0.01))
@@ -183,18 +145,35 @@ Example with all props:
 </Canvas>
 ```
 
-### Primitive Components (`<T/>`)
+### T Namespace (`<T/>`)
 
-`<T/>` components are wrappers around `three.js` objects, allowing you to insert these objects into your scene declaratively. These components are created dynamically based on the `three.js` classes you've registered with `extend()`.
-
-Example:
+The `T` namespace contains components that wrap `three.js` objects, allowing you to insert them into your scene declaratively. Before using these components, you must create the namespace using the `createT()` function:
 
 ```tsx
+import { createT } from "solid-three"
+import * as THREE from "three"
+
+// Create T namespace with all THREE.js objects
+const T = createT(THREE)
+
+// Now you can use T components
 <T.Mesh>
   <T.BoxGeometry args={[1, 1, 1]} />
   <T.MeshBasicMaterial color="hotpink" />
 </T.Mesh>
 ```
+
+You can also create a namespace with specific objects for better tree-shaking:
+
+```tsx
+import { createT } from "solid-three"
+import { Mesh, BoxGeometry, MeshBasicMaterial } from "three"
+
+// Create T namespace with only specific objects
+const T = createT({ Mesh, BoxGeometry, MeshBasicMaterial })
+```
+
+The `T` namespace can be created once and imported throughout your application, or created locally in each file as needed. The components are typed based on the objects you pass to `createT()`, providing full TypeScript support and autocomplete.
 
 #### Advanced Prop Patterns
 
@@ -393,7 +372,7 @@ function useLoader<TLoader, TArgs>(
 
 ```tsx
 import { createSignal } from "solid-js"
-import { Canvas, T, useLoader } from "solid-three"
+import { Canvas, useLoader } from "solid-three"
 import { TextureLoader } from "three"
 
 const TexturedSphere = () => {
@@ -420,7 +399,7 @@ export const App = () => {
 ### Multiple textures
 
 ```tsx
-import { Canvas, T, useLoader } from "solid-three"
+import { Canvas, useLoader } from "solid-three"
 import { TextureLoader } from "three"
 
 const TexturedPlanes = () => {
@@ -715,13 +694,14 @@ solid-three's hover event handling differs from react-three-fiber in several key
 
 ```tsx
 import type { S3 } from "solid-three"
+import type * as THREE from "three"
 
 // Component types
-type MeshComponent = S3.Component<Mesh>
-type BoxProps = S3.ClassProps<BoxGeometry>
+type MeshComponent = S3.Component<THREE.Mesh>
+type BoxProps = S3.Props<THREE.BoxGeometry>
 
 // Instance types - `three.js` objects augmented with solid-three metadata
-type AugmentedMesh = S3.Instance<Mesh>
+type AugmentedMesh = S3.Instance<THREE.Mesh>
 
 // Generic Three instance
 type AnyInstance = S3.ThreeInstance
@@ -733,11 +713,11 @@ type Camera = S3.CameraType // PerspectiveCamera | OrthographicCamera
 ### Props Types
 
 ```tsx
-import type { Mesh, MeshStandardMaterial } from "three"
+import type { S3 } from "solid-three"
 
 // Get props type for a specific `three.js` class
-type MeshProps = S3.Props<Mesh>
-type MaterialProps = S3.Props<MeshStandardMaterial>
+type MeshProps = S3.Props<THREE.Mesh>
+type MaterialProps = S3.Props<THREE.MeshStandardMaterial>
 
 // Using in components
 const MyMesh = (props: MeshProps) => {
@@ -1004,7 +984,6 @@ const SharedResource = () => {
 ```tsx
 import { test, TestCanvas } from "solid-three/testing"
 import { render } from "@solidjs/testing-library"
-import { T } from "solid-three"
 
 test("renders a mesh", () => {
   const { canvas, scene, unmount, waitTillNextFrame } = test(() => (
@@ -1051,6 +1030,7 @@ import { WebGL2RenderingContext } from "solid-three/testing"
 
 ```tsx
 import { fireEvent } from "@solidjs/testing-library"
+import { test } from "solid-three/testing"
 
 test("handles click events", () => {
   let clicked = false
@@ -1105,6 +1085,9 @@ test("useThree returns context", () => {
 ### Testing Animations
 
 ```tsx
+import { test } from "solid-three/testing"
+import { useFrame } from "solid-three"
+
 test("animates on frame", async () => {
   let rotation = 0
 
@@ -1124,6 +1107,17 @@ test("animates on frame", async () => {
   expect(rotation).toBeGreaterThan(0)
 })
 ```
+
+## Differences from React-Three-Fiber
+
+While `solid-three` is heavily inspired by– and initially shared a lot of code with– react-three-fiber, there are currently several key differences:
+
+- **No `performance` Prop**: The `Canvas` component does not support a `performance` prop as optimization is handled differently in `solid-js`.
+- **Simplified Event Objects**: The event object provided to event handlers is more minimalistic.
+- **Minimal `useThree` Hook**: Returns a more concise context object, focusing on essential properties.
+- **Missed Events**: Implements `onClickMissed`, `onDoubleClickMissed`, and `onContextMenuMissed` for handling events on empty space or stopped propagation.
+- **TODO**:
+  - **No Pointer Capture**: Pointer events do not support pointer capture management.
 
 ## Contributing
 
