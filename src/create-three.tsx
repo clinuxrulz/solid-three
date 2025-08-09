@@ -29,7 +29,7 @@ import { createEvents } from "./create-events.ts"
 import { AugmentedStack } from "./data-structure/augmented-stack.ts"
 import { frameContext, threeContext } from "./hooks.ts"
 import { canvasPropsContext, eventContext } from "./internal-context.ts"
-import { manageProps, manageSceneGraph } from "./props.ts"
+import { manageSceneGraph, useProps } from "./props.ts"
 import type { CameraType, Context } from "./types.ts"
 import { defaultProps } from "./utils/default-props.ts"
 import { removeElementFromArray } from "./utils/remove-element-from-array.ts"
@@ -244,7 +244,7 @@ function initializeContext(context: Context, props: CanvasProps) {
     // Manage camera
     createRenderEffect(() => {
       if (!props.camera || props.camera instanceof Camera) return
-      manageProps(camera, props.camera)
+      useProps(camera, props.camera)
       // NOTE:  Manually update camera's matrix with updateMatrixWorld is needed.
       //        Otherwise casting a ray immediately after start-up will cause the incorrect matrix to be used.
       camera().updateMatrixWorld(true)
@@ -253,13 +253,13 @@ function initializeContext(context: Context, props: CanvasProps) {
     // Manage scene
     createRenderEffect(() => {
       if (!props.scene || props.scene instanceof Scene) return
-      manageProps(scene, props.scene)
+      useProps(scene, props.scene)
     })
 
     // Manage raycaster
     createRenderEffect(() => {
       if (!props.raycaster || props.raycaster instanceof Raycaster) return
-      manageProps(raycaster, props.raycaster)
+      useProps(raycaster, props.raycaster)
     })
 
     // Manage gl
@@ -301,7 +301,7 @@ function initializeContext(context: Context, props: CanvasProps) {
       const LinearEncoding = 3000
       const sRGBEncoding = 3001
       // Color management and tone-mapping
-      manageProps(gl, {
+      useProps(gl, {
         get outputEncoding() {
           return props.linear ? LinearEncoding : sRGBEncoding
         },
@@ -312,7 +312,7 @@ function initializeContext(context: Context, props: CanvasProps) {
 
       // Manage props
       if (props.gl && !(props.gl instanceof WebGLRenderer)) {
-        manageProps(gl, props.gl)
+        useProps(gl, props.gl)
       }
     })
   }, [

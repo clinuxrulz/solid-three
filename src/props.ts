@@ -44,7 +44,7 @@ import { resolve } from "./utils/resolve.ts"
  * @param props - An object containing the props to apply. This includes both direct properties
  *                and special properties like `ref` and `children`.
  */
-export function manageProps<T extends object>(object: Accessor<T>, props: any) {
+export function useProps<T extends object>(object: Accessor<T>, props: any) {
   const [local, instanceProps] = splitProps(props, ["ref", "args", "object", "attach", "children"])
 
   // Assign ref

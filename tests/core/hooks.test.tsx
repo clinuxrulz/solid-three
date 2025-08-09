@@ -2,13 +2,15 @@ import { Show, Suspense } from "solid-js"
 import * as THREE from "three"
 import { GLTFLoader } from "three-stdlib"
 import { describe, expect, it, vi } from "vitest"
-import { T, buildGraph, useFrame, useLoader, useThree } from "../../src/index.ts"
+import { buildGraph, createT, useFrame, useLoader, useThree } from "../../src/index.ts"
 import { test } from "../../src/testing/index.tsx"
 import type { Context } from "../../src/types.ts"
 import { asyncUtils } from "../utils/async-utils.ts"
 
 const resolvers: (() => void)[] = []
 const { waitFor } = asyncUtils(resolver => resolvers.push(resolver))
+
+const T = createT(THREE)
 
 describe("hooks", () => {
   it("can handle useThree hook", async () => {
@@ -69,7 +71,7 @@ describe("hooks", () => {
     const Component = () => {
       const model = useLoader(mockGLTFLoader, () => "/suzanne.glb")
       // @ts-expect-error TODO: fix type-error
-      return <Show when={model()}>{model => <T.Primitive object={model()} />}</Show>
+      return <Show when={model()}>{model => <Primitive object={model()} />}</Show>
     }
 
     const scene = test(() => (
@@ -125,9 +127,9 @@ describe("hooks", () => {
           {([mockMesh, mockScene]) => (
             <>
               {/* @ts-expect-error TODO: fix type-error */}
-              <T.Primitive object={mockMesh} />
+              <Primitive object={mockMesh} />
               {/* @ts-expect-error TODO: fix type-error */}
-              <T.Primitive object={mockScene} />
+              <Primitive object={mockScene} />
             </>
           )}
         </Show>

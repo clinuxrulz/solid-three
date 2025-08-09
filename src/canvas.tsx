@@ -6,7 +6,14 @@ import {
   onCleanup,
   onMount,
 } from "solid-js"
-import { Camera, OrthographicCamera, Raycaster, Scene, WebGLRenderer } from "three"
+import {
+  Camera,
+  OrthographicCamera,
+  PerspectiveCamera,
+  Raycaster,
+  Scene,
+  WebGLRenderer,
+} from "three"
 import { createThree } from "./create-three.tsx"
 import type { EventHandlers, Props } from "./types.ts"
 
@@ -16,21 +23,21 @@ import type { EventHandlers, Props } from "./types.ts"
 export interface CanvasProps extends ParentProps<Partial<EventHandlers>> {
   class?: string
   /** Configuration for the camera used in the scene. */
-  camera?: Partial<Props<"PerspectiveCamera"> | Props<"OrthographicCamera">> | Camera
+  camera?: Partial<Props<PerspectiveCamera> | Props<OrthographicCamera>> | Camera
   /** Element to render while the main content is loading asynchronously.  */
   fallback?: JSX.Element
   /** Options for the WebGLRenderer or a function returning a customized renderer. */
   gl?:
-    | Partial<Props<"WebGLRenderer">>
+    | Partial<Props<WebGLRenderer>>
     | ((canvas: HTMLCanvasElement) => WebGLRenderer)
     | WebGLRenderer
   /** Toggles between Orthographic and Perspective camera. */
   orthographic?: boolean
   /** Configuration for the Raycaster used for mouse and pointer events. */
-  raycaster?: Partial<Props<"Raycaster">> | Raycaster
+  raycaster?: Partial<Props<Raycaster>> | Raycaster
   ref?: Ref<HTMLDivElement>
   /** Configuration for the Scene instance. */
-  scene?: Partial<Props<"Scene">> | Scene
+  scene?: Partial<Props<Scene>> | Scene
   /** Custom CSS styles for the canvas container. */
   style?: JSX.CSSProperties
   /** Enables and configures shadows in the scene. */

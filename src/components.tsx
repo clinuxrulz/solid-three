@@ -2,9 +2,9 @@ import { type JSX, type ParentProps, createMemo, createRenderEffect, mergeProps 
 import { Object3D } from "three"
 import { augment } from "./augment.ts"
 import { threeContext, useThree } from "./hooks.ts"
-import { manageProps, manageSceneGraph } from "./props.ts"
-import { type InstanceFromConstructor } from "./type-utils.ts"
-import type { ClassProps, Instance, ThreeInstance } from "./types.ts"
+import { manageSceneGraph, useProps } from "./props.ts"
+import type { Instance, Props, ThreeInstance } from "./types.ts"
+import { type InstanceFromConstructor } from "./types.ts"
 import { isInstance } from "./utils/is-instance.ts"
 import { withContext } from "./utils/with-context.ts"
 
@@ -48,22 +48,22 @@ export const Portal = (props: PortalProps) => {
   return null
 }
 
-type PrimitiveProps<T> = Omit<ClassProps<T>, "object" | "children" | "ref" | "args"> & {
-  object: T
+type EntityProps<T> = Omit<Props<T>, "object" | "children" | "ref" | "args"> & {
+  from: T
   children?: JSX.Element
   ref?: T | ((value: T) => void)
 }
 /**
  * Wraps a `ThreeElement` and allows it to be used as a JSX-component within a `solid-three` scene.
  *
- * @function Primitive
+ * @function Entity
  * @template T - Extends `ThreeInstance`
  * @param props - The properties for the Three.js object including the object instance's methods,
  *                                    optional children, and a ref that provides access to the object instance.
  * @returns The Three.js object wrapped as a JSX element, allowing it to be used within Solid's component system.
  */
-export function Primitive<T extends ThreeInstance>(props: PrimitiveProps<T>) {
-  const memo = createMemo(() => augment(props.object, { props }) as Instance<T>)
-  manageProps(memo, props)
+export function Entity<T extends ThreeInstance>(props: EntityProps<T>) {
+  const memo = createMemo(() => augment(props.from, { props }) as Instance<T>)
+  useProps(memo, props)
   return memo as unknown as JSX.Element
 }
