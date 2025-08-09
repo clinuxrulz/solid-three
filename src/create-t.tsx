@@ -1,6 +1,6 @@
 import { createMemo, type JSX, mergeProps } from "solid-js"
 import { augment } from "./augment.ts"
-import { manageProps } from "./props.ts"
+import { useProps } from "./props.ts"
 import type { Component } from "./types.ts"
 
 /**********************************************************************************/
@@ -50,7 +50,7 @@ export function createTComponent<TSource>(source: TSource): Component<TSource> {
         throw new Error("")
       }
     })
-    manageProps(memo, props)
+    useProps(memo, props)
     return memo as unknown as JSX.Element
   }
 }

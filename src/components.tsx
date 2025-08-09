@@ -2,7 +2,7 @@ import { type JSX, type ParentProps, createMemo, createRenderEffect, mergeProps 
 import { Object3D } from "three"
 import { augment } from "./augment.ts"
 import { threeContext, useThree } from "./hooks.ts"
-import { manageProps, manageSceneGraph } from "./props.ts"
+import { manageSceneGraph, useProps } from "./props.ts"
 import type { Instance, Props, ThreeInstance } from "./types.ts"
 import { type InstanceFromConstructor } from "./types.ts"
 import { isInstance } from "./utils/is-instance.ts"
@@ -64,6 +64,6 @@ type EntityProps<T> = Omit<Props<T>, "object" | "children" | "ref" | "args"> & {
  */
 export function Entity<T extends ThreeInstance>(props: EntityProps<T>) {
   const memo = createMemo(() => augment(props.from, { props }) as Instance<T>)
-  manageProps(memo, props)
+  useProps(memo, props)
   return memo as unknown as JSX.Element
 }
