@@ -9,7 +9,7 @@ import {
 } from "solid-js"
 import * as THREE from "three"
 import { beforeAll, describe, expect, it, vi } from "vitest"
-import { createT, Portal, Primitive, useFrame, useThree } from "../../src/index.ts"
+import { createT, Entity, Portal, useFrame, useThree } from "../../src/index.ts"
 import { test } from "../../src/testing/index.tsx"
 import type { Context, Instance } from "../../src/types.ts"
 
@@ -355,9 +355,9 @@ describe("renderer", () => {
     const object2 = new THREE.Group()
 
     const Test = (props: { first?: boolean }) => (
-      <Primitive object={props.first ? object1 : object2} onPointerMove={() => null}>
+      <Entity from={props.first ? object1 : object2} onPointerMove={() => null}>
         <T.Group />
-      </Primitive>
+      </Entity>
     )
 
     const state = test(() => <Test first={first()} />)
@@ -391,16 +391,16 @@ describe("renderer", () => {
     // expect(state.eventRegistry.onPointerMove.length).not.toBe(0);
   })
 
-  it("can swap primitives", async () => {
+  it("can swap Entitys", async () => {
     const [n, setN] = createSignal(1)
     const o1 = new THREE.Group()
     o1.add(new THREE.Group())
     const o2 = new THREE.Group()
 
     const Test = (props: { n: number }) => (
-      <Primitive object={props.n === 1 ? o1 : o2}>
+      <Entity from={props.n === 1 ? o1 : o2}>
         <T.Group attach="test" />
-      </Primitive>
+      </Entity>
     )
 
     const state = test(() => <Test n={n()} />)
@@ -418,7 +418,7 @@ describe("renderer", () => {
     expect((state.scene.children[0] as any).test).toBeInstanceOf(THREE.Group)
   })
 
-  it("can swap 4 array primitives", async () => {
+  it("can swap 4 array Entitys", async () => {
     const a = new THREE.Group()
     const b = new THREE.Group()
     const c = new THREE.Group()
@@ -427,7 +427,7 @@ describe("renderer", () => {
 
     const Test = (props: { array: THREE.Group[] }) => (
       <>
-        <For each={props.array}>{group => <Primitive object={group} />}</For>
+        <For each={props.array}>{group => <Entity from={group} />}</For>
       </>
     )
 
@@ -823,11 +823,11 @@ describe("renderer", () => {
     let child: THREE.Object3D = null!
     let attachedChild: THREE.Object3D = null!
 
-    const Test = (props: ComponentProps<typeof Primitive>) => (
-      <Primitive {...props} ref={ref}>
+    const Test = (props: ComponentProps<typeof Entity>) => (
+      <Entity {...props} ref={ref}>
         <T.Object3D ref={child} />
         <T.Object3D ref={attachedChild} attach="userData-attach" />
-      </Primitive>
+      </Entity>
     )
 
     const object1 = new THREE.Object3D()
@@ -841,7 +841,7 @@ describe("renderer", () => {
     const [object, setObject] = createSignal(object1)
 
     // Initial
-    test(() => <Test object={object()} />)
+    test(() => <Test from={object()} />)
 
     expect(ref).toBe(object1)
 
