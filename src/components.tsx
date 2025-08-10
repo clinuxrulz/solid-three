@@ -2,9 +2,9 @@ import { type JSX, type ParentProps, createMemo, createRenderEffect, mergeProps 
 import { Object3D } from "three"
 import { threeContext, useThree } from "./hooks.ts"
 import { manageSceneGraph, useProps } from "./props.ts"
-import type { Instance, Props, ThreeInstance } from "./types.ts"
+import type { Instance, Props } from "./types.ts"
 import { type InstanceFromConstructor } from "./types.ts"
-import { augment, isInstance, withContext } from "./utils.ts"
+import { augment, autodispose, isConstructor, isInstance, withContext } from "./utils.ts"
 
 type PortalProps = ParentProps<{
   element?: InstanceFromConstructor<Object3D> | Instance<Object3D>
@@ -46,11 +46,13 @@ export const Portal = (props: PortalProps) => {
   return null
 }
 
-type EntityProps<T> = Omit<Props<T>, "object" | "children" | "ref" | "args"> & {
-  from: T
-  children?: JSX.Element
-  ref?: T | ((value: T) => void)
-}
+type EntityProps<T> = ParentProps<{ from: T; ref?: T | ((value: T) => void) }> &
+  (T extends new (...args: any[]) => any
+    ? Omit<Props<T>, "object" | "children" | "ref">
+    : Omit<Props<T>, "object" | "children" | "ref" | "args"> & {
+        args?: never
+      })
+
 /**
  * Wraps a `ThreeElement` and allows it to be used as a JSX-component within a `solid-three` scene.
  *
@@ -60,8 +62,13 @@ type EntityProps<T> = Omit<Props<T>, "object" | "children" | "ref" | "args"> & {
  *                                    optional children, and a ref that provides access to the object instance.
  * @returns The Three.js object wrapped as a JSX element, allowing it to be used within Solid's component system.
  */
-export function Entity<T extends ThreeInstance>(props: EntityProps<T>) {
-  const memo = createMemo(() => augment(props.from, { props }) as Instance<T>)
+export function Entity<T extends object | (new (...args: any[]) => object)>(props: EntityProps<T>) {
+  const memo = createMemo(() => {
+    return augment(
+      isConstructor(props.from) ? autodispose(new props.from(...(props.args ?? []))) : props.from,
+      { props },
+    ) as Instance<T>
+  })
   useProps(memo, props)
   return memo as unknown as JSX.Element
 }
