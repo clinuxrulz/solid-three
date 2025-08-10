@@ -4,7 +4,7 @@
 
 # solid-three
 
-`solid-three` is a port of [react-three-fiber](https://github.com/pmndrs/react-three-fiber) to [solid-js](https://www.solidjs.com/). It allows you to declaratively construct a [Three.js](https://threejs.org/) scene, with reactive primitives, just as you would construct a DOM tree in `solid-js`.
+`solid-three` is a port of [react-three-fiber](https://github.com/pmndrs/react-three-fiber) to [solid-js](https://www.solidjs.com/). It allows you to declaratively construct a [three.js](https://threejs.org/) scene, with reactive primitives, just as you would construct a DOM tree in `solid-js`.
 
 - **Declarative `three.js` Components**: Utilize `three.js` objects as JSX components.
 - **Reactive Prop Updates**: Properties of 3D objects update reactively, promoting efficient re-renders.
@@ -19,23 +19,24 @@
 2. [Basic Usage](#basic-usage)
 3. [Components](#components)
    - [Canvas](#canvas)
-   - [T Namespace (`<T/>`)](#t-namespace-t)
+   - [T](#t)
+   - [Entity](#entity)
    - [Portal](#portal)
-   - [Primitive](#primitive)
 4. [Hooks](#hooks)
    - [useThree](#usethree)
    - [useFrame](#useframe)
    - [useLoader](#useloader)
-5. [Event Handling](#event-handling)
+5. [Utilities](#utilities)
+   - [autodispose](#autodispose)
+6. [Event Handling](#event-handling)
    - [Controlling Raycasting with pointerEvents](#controlling-raycasting-with-pointerevents)
    - [Supported Events](#supported-events)
    - [Event Object](#event-object)
    - [Event Propagation](#event-propagation)
    - [Missed Events](#missed-events)
    - [Hover Events](#hover-events)
-6. [TypeScript Support](#typescript-support)
-7. [Performance Optimization](#performance-optimization)
-8. [Testing](#testing)
+7. [TypeScript Support](#typescript-support)
+8. [Performance Optimization](#performance-optimization)
 9. [API Reference](#api-reference)
 10. [Differences from React-Three-Fiber](#differences-from-react-three-fiber)
 11. [Contributing](#contributing)
@@ -63,10 +64,47 @@ Here's a simple example to get you started:
 
 ```tsx
 import { Component, createSignal } from "solid-js"
+import { Canvas, Entity, useFrame } from "solid-three"
+import * as THREE from "three"
+
+const Box = () => {
+  let mesh: THREE.Mesh | undefined
+  const [hovered, setHovered] = createSignal(false)
+
+  useFrame(() => (mesh!.rotation.y += 0.01))
+
+  return (
+    <Entity
+      from={THREE.Mesh}
+      ref={mesh}
+      onPointerEnter={e => setHovered(true)}
+      onPointerLeave={e => setHovered(false)}
+    >
+      <Entity from={THREE.BoxGeometry} />
+      <Entity from={THREE.MeshStandardMaterial} args={[{ color: hovered() ? "green" : "red" }]} />
+    </Entity>
+  )
+}
+
+const App: Component = () => {
+  return (
+    <Canvas camera={{ position: [0, 0, 5] }}>
+      <Entity from={THREE.AmbientLight} args={[0.5]} />
+      <Entity from={THREE.PointLight} position={[10, 10, 10]} />
+      <Box />
+    </Canvas>
+  )
+}
+```
+
+Alternatively, using the `createT()` pattern:
+
+```tsx
+import { Component, createSignal } from "solid-js"
 import { Canvas, createT, useFrame } from "solid-three"
 import * as THREE from "three"
 
-// Create the T namespace with THREE.js objects
+// Create the T namespace
 const T = createT(THREE)
 
 const Box = () => {
@@ -98,11 +136,16 @@ const App: Component = () => {
 }
 ```
 
+**Choosing between `Entity` and `T`:**
+
+- **Use `Entity`**: When building libraries, working with dynamic object types, or when you want to avoid creating a namespace
+- **Use `T`**: When building applications where you want the convenience of pre-typed components and better autocomplete
+
 ## Components
 
 ### Canvas
 
-The `Canvas` component initializes the `three.js` rendering context and acts as the root for your 3D scene. All `<T/>` components must be children of this Canvas.
+The `Canvas` component initializes the `three.js` rendering context and acts as the root for your 3D scene. All `<T/>` and `<Entity/>` components must be children of this Canvas.
 
 **Props:**
 
@@ -145,15 +188,15 @@ Example with all props:
 </Canvas>
 ```
 
-### T Namespace (`<T/>`)
+### T
 
-The `T` namespace contains components that wrap `three.js` objects, allowing you to insert them into your scene declaratively. Before using these components, you must create the namespace using the `createT()` function:
+The `T` namespace contains components that wrap `three.js` objects, allowing you to insert them into your scene declaratively. You create the namespace using the `createT()` factory function:
 
 ```tsx
 import { createT } from "solid-three"
 import * as THREE from "three"
 
-// Create T namespace with all THREE.js objects
+// Create T namespace with all three.js objects
 const T = createT(THREE)
 
 // Now you can use T components
@@ -163,7 +206,7 @@ const T = createT(THREE)
 </T.Mesh>
 ```
 
-You can also create a namespace with specific objects for better tree-shaking:
+You can also create a namespace with specific objects for tree-shaking purposes:
 
 ```tsx
 import { createT } from "solid-three"
@@ -173,7 +216,11 @@ import { Mesh, BoxGeometry, MeshBasicMaterial } from "three"
 const T = createT({ Mesh, BoxGeometry, MeshBasicMaterial })
 ```
 
-The `T` namespace can be created once and imported throughout your application, or created locally in each file as needed. The components are typed based on the objects you pass to `createT()`, providing full TypeScript support and autocomplete.
+**Usage Patterns:**
+
+- **In Applications**: Create a single `T` and export it for use throughout your app
+- **In Libraries**: create multiple `T` to allow for treeshaking or use [`<Entity/>`](#entity) instead
+- **Multiple Ts**: Create multiple T instances for lazy loading different parts of three.js
 
 #### Advanced Prop Patterns
 
@@ -205,10 +252,69 @@ const AdvancedProps = () => {
 
 - **Direct props**: `color="red"` → `object.color = "red"`
 - **Hyphen notation**: `position-x={1}` → `object.position.x = 1`
-- **Dot notation**: `material.color="blue"` → `object.material.color = "blue"`
 - **Deep nesting**: `material-emissive-intensity={0.5}` → `object.material.emissive.intensity = 0.5`
 
 These patterns automatically trigger `needsUpdate` flags on materials and geometries when necessary.
+
+### Entity
+
+The `Entity` component provides an alternative way to create three.js objects without needing to pre-create a T namespace. This is particularly useful in libraries or when working with dynamic object types:
+
+```tsx
+import { Entity } from "solid-three"
+import { Mesh, BoxGeometry, MeshBasicMaterial } from "three"
+
+function Constructor() {
+  return (
+    // Pass constructor with optional arguments
+    <Entity from={Mesh}>
+      <Entity from={BoxGeometry} />
+      <Entity from={MeshBasicMaterial} args={[{ color: "orange" }]} />
+    </Entity>
+  )
+}
+
+function Instance() {
+  // Pass instance
+  const mesh = new Mesh()
+  return <Entity from={mesh} position={[0, 0, 0]} />
+}
+```
+
+**Props:**
+
+- **from** (`Constructor | Instance`): Either a three.js constructor (class) or an existing instance
+- **args** (`ConstructorParameters`): Arguments to pass to the constructor when using a class
+- All other props supported by the three.js object
+
+#### Manual disposal of instance-entities
+
+When passing an instance to `<Entity from={...}/>` disposal need to be handled manually. This can be done via the [`autodispose`-utility](#autodispose):
+
+```tsx
+import { Entity, autodispose } from "solid-three"
+import { BoxGeometry, SphereGeometry } from "three"
+
+function Wrong(props: { shape: "box" | "sphere" }) {
+  const box = new BoxGeometry()
+  const sphere = new SphereGeometry()
+  return (
+    <Show when={props.shape === "box"} fallback={<Entity from={sphere} />}>
+      <Entity from={box} />
+    </Show>
+  )
+}
+
+function Good(props: { shape: "box" | "sphere" }) {
+  const box = autodispose(new BoxGeometry())
+  const sphere = autodispose(new SphereGeometry())
+  return (
+    <Show when={props.shape === "box"} fallback={<Entity from={sphere} />}>
+      <Entity from={box} />
+    </Show>
+  )
+}
+```
 
 ### Portal
 
@@ -242,37 +348,6 @@ const App = () => {
           <T.MeshBasicMaterial color="red" />
         </T.Mesh>
       </Portal>
-    </Canvas>
-  )
-}
-```
-
-### Primitive
-
-The `Primitive` component wraps existing `three.js` objects and allows them to be used as JSX components within `solid-three`. This is useful when you have pre-created `three.js` objects or when working with objects from external libraries.
-
-**Props:**
-
-- **object** (`T extends ThreeInstance`): The `three.js` object to wrap.
-- **ref** (`T | ((value: T) => void)`): Optional ref to access the object.
-- Any additional props supported by the `three.js` object.
-
-Example:
-
-```tsx
-import { Primitive } from "solid-three"
-import { Mesh, BoxGeometry, MeshBasicMaterial } from "three"
-
-// Create `three.js` objects imperatively
-const geometry = new BoxGeometry(1, 1, 1)
-const material = new MeshBasicMaterial({ color: "orange" })
-const mesh = new Mesh(geometry, material)
-
-const App = () => {
-  return (
-    <Canvas>
-      {/* Use the existing mesh in the declarative scene */}
-      <Primitive object={mesh} position={[0, 0, 0]} onClick={() => console.log("Clicked!")} />
     </Canvas>
   )
 }
@@ -334,7 +409,7 @@ useFrame((context: Context, delta: number, frame?: XRFrame) => void)
 
 **Parameters:**
 
-- **context** - The Three.js context object (same as `useThree()`)
+- **context** - The three.js context object (same as `useThree()`)
 - **delta** - Time elapsed since last frame in seconds
 - **frame** - Optional XRFrame for WebXR sessions
 
@@ -422,6 +497,49 @@ export const App = () => {
     <Canvas>
       <TexturedPlanes />
     </Canvas>
+  )
+}
+```
+
+## Utilities
+
+### autodispose
+
+The `autodispose` utility ensures that three.js objects are properly disposed on cleanup.
+
+```tsx
+import { autodispose } from "solid-three"
+import { BoxGeometry, MeshBasicMaterial } from "three"
+
+function Component() {
+  // Any object wrapped with autodispose will be disposed when Component's owner cleans up
+  const geometry = autodispose(new BoxGeometry())
+  const material = autodispose(new MeshBasicMaterial({ color: "red" }))
+}
+```
+
+**Use cases:**
+
+- Creating reusable instances that should be disposed with the component
+- Working with conditional rendering where objects need cleanup
+- Managing resources in reactive contexts
+
+```tsx
+import { Show, createSignal } from "solid-js"
+import { Entity, autodispose } from "solid-three"
+import { Mesh, BoxGeometry, MeshBasicMaterial } from "three"
+
+function ConditionalMesh() {
+  const [visible, setVisible] = createSignal(true)
+
+  // These will be disposed when ConditionalMesh unmounts
+  const geometry = autodispose(new BoxGeometry())
+  const material = autodispose(new MeshBasicMaterial())
+
+  return (
+    <Show when={visible()}>
+      <Entity from={new Mesh(geometry, material)} />
+    </Show>
   )
 }
 ```
@@ -794,7 +912,7 @@ type Metadata = S3.Metadata<Mesh>
 
 ### Automatic Resource Disposal
 
-`solid-three` automatically manages memory by disposing of THREE.js objects when components are removed from the scene:
+`solid-three` automatically manages memory by disposing of three.js objects when components are removed from the scene:
 
 ```tsx
 const AutoDisposedGeometry = () => {
@@ -813,7 +931,7 @@ const AutoDisposedGeometry = () => {
 - Geometries (`dispose()` method called on unmount)
 - Materials (`dispose()` method called on unmount)
 - Textures (disposed when no longer referenced)
-- Other THREE.js objects with a `dispose()` method
+- Other three.js objects with a `dispose()` method
 
 **Manual disposal:** If you need custom disposal behavior, you can handle cleanup manually:
 
@@ -926,7 +1044,7 @@ const ColorHandling = () => {
 - String colors (`"red"`, `"#ff0000"`) → `THREE.Color`
 - Hex numbers (`0xff0000`) → `THREE.Color`
 - Array colors (`[1, 0, 0]`) → `THREE.Color`
-- Texture `encoding` property aliased to `colorSpace` for THREE.js r152+ compatibility
+- Texture `encoding` property aliased to `colorSpace` for three.js r152+ compatibility
 
 ### Texture Optimization
 
@@ -973,139 +1091,6 @@ const SharedResource = () => {
 
   return <T.MeshBasicMaterial map={texture()} />
 }
-```
-
-## Testing
-
-`solid-three` provides a comprehensive testing framework for unit testing 3D components. The testing utilities are available as a separate export.
-
-### Setup and Basic Testing
-
-```tsx
-import { test, TestCanvas } from "solid-three/testing"
-import { render } from "@solidjs/testing-library"
-
-test("renders a mesh", () => {
-  const { canvas, scene, unmount, waitTillNextFrame } = test(() => (
-    <T.Mesh>
-      <T.BoxGeometry />
-      <T.MeshBasicMaterial />
-    </T.Mesh>
-  ))
-
-  expect(scene.children).toHaveLength(1)
-  expect(scene.children[0]).toBeDefined()
-
-  // Clean up
-  unmount()
-})
-
-// Using TestCanvas for JSX-based testing
-test("renders with TestCanvas", () => {
-  render(() => (
-    <TestCanvas camera={{ position: [0, 0, 5] }}>
-      <T.Mesh>
-        <T.BoxGeometry />
-        <T.MeshBasicMaterial />
-      </T.Mesh>
-    </TestCanvas>
-  ))
-
-  // TestCanvas automatically handles the canvas setup
-})
-```
-
-### Mock WebGL Context
-
-The testing framework includes a mock WebGL2RenderingContext for environments without GPU support:
-
-```tsx
-import { WebGL2RenderingContext } from "solid-three/testing"
-
-// Automatically used when real WebGL is unavailable
-// Provides all WebGL methods as no-ops for testing
-```
-
-### Testing Events
-
-```tsx
-import { fireEvent } from "@solidjs/testing-library"
-import { test } from "solid-three/testing"
-
-test("handles click events", () => {
-  let clicked = false
-
-  const { canvas } = test(() => (
-    <T.Mesh onClick={() => (clicked = true)}>
-      <T.BoxGeometry />
-      <T.MeshBasicMaterial />
-    </T.Mesh>
-  ))
-
-  // Create a mock click event on the canvas
-  const clickEvent = new MouseEvent("click")
-  Object.defineProperty(clickEvent, "offsetX", { get: () => 640 })
-  Object.defineProperty(clickEvent, "offsetY", { get: () => 400 })
-
-  fireEvent(canvas, clickEvent)
-
-  expect(clicked).toBe(true)
-})
-```
-
-### Testing Hooks
-
-```tsx
-import { test } from "solid-three/testing"
-import { useThree } from "solid-three"
-
-test("useThree returns context", () => {
-  let context
-
-  const TestComponent = () => {
-    context = useThree()
-    return (
-      <T.Mesh>
-        <T.BoxGeometry />
-        <T.MeshBasicMaterial />
-      </T.Mesh>
-    )
-  }
-
-  const { unmount } = test(() => <TestComponent />)
-
-  expect(context.camera).toBeDefined()
-  expect(context.gl).toBeDefined()
-  expect(context.scene).toBeDefined()
-
-  unmount()
-})
-```
-
-### Testing Animations
-
-```tsx
-import { test } from "solid-three/testing"
-import { useFrame } from "solid-three"
-
-test("animates on frame", async () => {
-  let rotation = 0
-
-  const AnimatedBox = () => {
-    useFrame(() => {
-      rotation += 0.01
-    })
-
-    return <T.Mesh />
-  }
-
-  const { waitTillNextFrame } = test(() => <AnimatedBox />, { frameloop: "always" })
-
-  // Wait for animation frame using test utility
-  await waitTillNextFrame()
-
-  expect(rotation).toBeGreaterThan(0)
-})
 ```
 
 ## Differences from React-Three-Fiber
