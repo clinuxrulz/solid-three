@@ -1,7 +1,7 @@
 import { createMemo, type JSX, mergeProps } from "solid-js"
-import { augment } from "./augment.ts"
 import { useProps } from "./props.ts"
 import type { Component } from "./types.ts"
+import { augment } from "./utils.ts"
 
 /**********************************************************************************/
 /*                                                                                */

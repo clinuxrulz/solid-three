@@ -2,7 +2,7 @@ import { Object3D, type Intersection } from "three"
 import type { CanvasProps } from "./canvas.tsx"
 import { $S3C } from "./constants.ts"
 import type { Context, EventName, Instance, ThreeEvent } from "./types.ts"
-import { isInstance } from "./utils/is-instance.ts"
+import { isInstance } from "./utils.ts"
 
 const eventNameMap = {
   onClick: "click",

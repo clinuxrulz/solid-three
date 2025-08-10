@@ -23,7 +23,6 @@ import {
   Vector2,
   WebGLRenderer,
 } from "three"
-import { augment } from "./augment.ts"
 import type { CanvasProps } from "./canvas.tsx"
 import { createEvents } from "./create-events.ts"
 import { AugmentedStack } from "./data-structure/augmented-stack.ts"
@@ -31,10 +30,8 @@ import { frameContext, threeContext } from "./hooks.ts"
 import { canvasPropsContext, eventContext } from "./internal-context.ts"
 import { manageSceneGraph, useProps } from "./props.ts"
 import type { CameraType, Context } from "./types.ts"
-import { defaultProps } from "./utils/default-props.ts"
-import { removeElementFromArray } from "./utils/remove-element-from-array.ts"
+import { augment, defaultProps, removeElementFromArray, withMultiContexts } from "./utils.ts"
 import { useMeasure } from "./utils/use-measure.ts"
-import { withMultiContexts } from "./utils/with-context.ts"
 
 /**
  * Creates and manages a `solid-three` scene. It initializes necessary objects like
@@ -109,7 +106,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
     }
     pendingRenderRequest = undefined
     context.gl.render(context.scene, context.camera)
-    frameListeners.forEach(listener => listener(context, timestamp, frame))
+    frameListeners.forEach(listener => listener(context, context.clock.getDelta(), frame))
   }
   function requestRender() {
     if (pendingRenderRequest) return
@@ -132,9 +129,12 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   const measure = useMeasure()
   measure.setElement(canvas)
 
+  const clock = new Clock()
+  clock.start()
+
   const context: Context = {
     canvas,
-    clock: new Clock(),
+    clock,
     get bounds() {
       return measure.bounds()
     },

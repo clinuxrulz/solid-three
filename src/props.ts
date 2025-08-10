@@ -23,10 +23,8 @@ import { isEventType } from "./create-events.ts"
 import { useThree } from "./hooks.ts"
 import { addToEventListeners, useCanvasProps } from "./internal-context.ts"
 import type { Instance } from "./types.ts"
+import { hasColorSpace, isInstance, resolve } from "./utils.ts"
 import { check } from "./utils/conditionals.ts"
-import { hasColorSpace } from "./utils/has-colorspace.ts"
-import { isInstance } from "./utils/is-instance.ts"
-import { resolve } from "./utils/resolve.ts"
 
 /**********************************************************************************/
 /*                                                                                */
