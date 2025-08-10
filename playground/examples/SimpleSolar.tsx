@@ -116,7 +116,7 @@ function CelestialBody(
   )
 }
 
-export function SimpleSolar() {
+export function SimpleSolarExample() {
   return (
     <Canvas
       style={{ width: "100vw", height: "100vh" }}
