@@ -6,6 +6,12 @@ import type { Instance, Props } from "./types.ts"
 import { type InstanceFromConstructor } from "./types.ts"
 import { augment, autodispose, isConstructor, isInstance, withContext } from "./utils.ts"
 
+/**********************************************************************************/
+/*                                                                                */
+/*                                     Portal                                     */
+/*                                                                                */
+/**********************************************************************************/
+
 type PortalProps = ParentProps<{
   element?: InstanceFromConstructor<Object3D> | Instance<Object3D>
 }>
@@ -46,13 +52,15 @@ export const Portal = (props: PortalProps) => {
   return null
 }
 
-type EntityProps<T> = ParentProps<{ from: T; ref?: T | ((value: T) => void) }> &
-  (T extends new (...args: any[]) => any
-    ? Omit<Props<T>, "object" | "children" | "ref">
-    : Omit<Props<T>, "object" | "children" | "ref" | "args"> & {
-        args?: never
-      })
+/**********************************************************************************/
+/*                                                                                */
+/*                                     Entity                                     */
+/*                                                                                */
+/**********************************************************************************/
 
+type EntityProps<T extends object | (new (...args: any[]) => any)> = Omit<Props<T>, "from"> & {
+  from: T
+}
 /**
  * Wraps a `ThreeElement` and allows it to be used as a JSX-component within a `solid-three` scene.
  *

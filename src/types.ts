@@ -146,7 +146,7 @@ export type Props<T extends object | unknown> = Partial<
   Overwrite<
     MapToRepresentation<InstanceFromConstructor<T>>,
     {
-      args: T extends Constructor ? ConstructorOverloadParameters<T> : unknown
+      args: T extends Constructor ? ConstructorOverloadParameters<T> : undefined
       attach:
         | string
         | ((
