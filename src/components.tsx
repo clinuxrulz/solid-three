@@ -1,8 +1,15 @@
-import { type JSX, type ParentProps, createMemo, createRenderEffect, mergeProps } from "solid-js"
+import {
+  type JSX,
+  type ParentProps,
+  createMemo,
+  createRenderEffect,
+  mergeProps,
+  splitProps,
+} from "solid-js"
 import { Object3D } from "three"
 import { threeContext, useThree } from "./hooks.ts"
 import { manageSceneGraph, useProps } from "./props.ts"
-import type { Instance, Props } from "./types.ts"
+import type { Constructor, Instance, Overwrite, Props } from "./types.ts"
 import { type InstanceFromConstructor } from "./types.ts"
 import { augment, autodispose, isConstructor, isInstance, withContext } from "./utils.ts"
 
@@ -58,9 +65,12 @@ export const Portal = (props: PortalProps) => {
 /*                                                                                */
 /**********************************************************************************/
 
-type EntityProps<T extends object | (new (...args: any[]) => any)> = Omit<Props<T>, "from"> & {
-  from: T
-}
+type EntityProps<T extends object | Constructor<object>> = Overwrite<
+  Props<T>,
+  {
+    from: T
+  }
+>
 /**
  * Wraps a `ThreeElement` and allows it to be used as a JSX-component within a `solid-three` scene.
  *
@@ -70,13 +80,16 @@ type EntityProps<T extends object | (new (...args: any[]) => any)> = Omit<Props<
  *                                    optional children, and a ref that provides access to the object instance.
  * @returns The Three.js object wrapped as a JSX element, allowing it to be used within Solid's component system.
  */
-export function Entity<T extends object | (new (...args: any[]) => object)>(props: EntityProps<T>) {
+export function Entity<T extends object | Constructor<object>>(props: EntityProps<T>) {
+  const [config, rest] = splitProps(props, ["from", "args"])
   const memo = createMemo(() => {
     return augment(
-      isConstructor(props.from) ? autodispose(new props.from(...(props.args ?? []))) : props.from,
+      isConstructor(config.from)
+        ? autodispose(new config.from(...(config.args ?? [])))
+        : config.from,
       { props },
     ) as Instance<T>
   })
-  useProps(memo, props)
+  useProps(memo, rest)
   return memo as unknown as JSX.Element
 }

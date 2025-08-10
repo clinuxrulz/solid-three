@@ -177,10 +177,8 @@ export type Constructor<T = any> = new (...args: any[]) => T
 export type InstanceFromConstructor<TConstructor extends object | unknown> =
   TConstructor extends Constructor<infer TObject> ? TObject : TConstructor
 
-/** Omit function-properties from given type. */
-type OmitFunctionProperties<T> = { [K in keyof T]: T[K] extends Function ? never : K }[keyof T]
 /** Overwrites the properties in `T` with the properties from `O`. */
-export type Overwrite<T, O> = Omit<T, OmitFunctionProperties<O>> & O
+export type Overwrite<T, O> = Omit<T, keyof O> & O
 
 /**
  * Extracts the parameters of all possible overloads of a given constructor.
