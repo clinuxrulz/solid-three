@@ -109,7 +109,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
     }
     pendingRenderRequest = undefined
     context.gl.render(context.scene, context.camera)
-    frameListeners.forEach(listener => listener(context, timestamp, frame))
+    frameListeners.forEach(listener => listener(context, context.clock.getDelta(), frame))
   }
   function requestRender() {
     if (pendingRenderRequest) return
@@ -132,9 +132,12 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   const measure = useMeasure()
   measure.setElement(canvas)
 
+  const clock = new Clock()
+  clock.start()
+
   const context: Context = {
     canvas,
-    clock: new Clock(),
+    clock,
     get bounds() {
       return measure.bounds()
     },
