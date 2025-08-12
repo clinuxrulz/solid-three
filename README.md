@@ -26,6 +26,7 @@
    - [useThree](#usethree)
    - [useFrame](#useframe)
    - [useLoader](#useloader)
+   - [useProps](#useprops)
 5. [Utilities](#utilities)
    - [autodispose](#autodispose)
 6. [Event Handling](#event-handling)
@@ -37,10 +38,9 @@
    - [Hover Events](#hover-events)
 7. [TypeScript Support](#typescript-support)
 8. [Performance Optimization](#performance-optimization)
-9. [API Reference](#api-reference)
-10. [Differences from React-Three-Fiber](#differences-from-react-three-fiber)
-11. [Contributing](#contributing)
-12. [License](#license)
+9. [Differences from React-Three-Fiber](#differences-from-react-three-fiber)
+10. [Contributing](#contributing)
+11. [License](#license)
 
 ## Installation
 
@@ -501,6 +501,74 @@ export const App = () => {
 }
 ```
 
+### useProps
+
+The `useProps` hook manages and applies `solid-three` props to THREE.js objects. It sets up reactive effects to ensure properties are correctly applied and updated, manages children attachment, and handles automatic disposal.
+
+**Signature:**
+
+```tsx
+function useProps<T extends object>(object: Accessor<T>, props: any): void
+```
+
+**Parameters:**
+
+- **object** (`Accessor<T>`): An accessor function that returns the target THREE.js object
+- **props** (`any`): Object containing props to apply (including `ref`, `children`, and THREE.js properties)
+
+**Usage:**
+
+This hook is primarily used internally by `solid-three` components, but can be useful when creating custom components or integrating existing THREE.js objects:
+
+```tsx
+import { createSignal } from "solid-js"
+import { useProps } from "solid-three"
+import { Mesh, BoxGeometry, MeshBasicMaterial } from "three"
+
+const CustomMesh = props => {
+  const mesh = new Mesh(new BoxGeometry(), new MeshBasicMaterial())
+
+  // Apply solid-three props reactively to the mesh
+  useProps(() => mesh, props)
+
+  return mesh // Return the THREE.js object for use in JSX
+}
+
+// Usage
+;<CustomMesh position={[1, 2, 3]} rotation={[0, Math.PI, 0]} color="red" />
+```
+
+**What it handles:**
+
+- **Reactive prop updates**: Automatically applies prop changes to the THREE.js object
+- **Ref assignment**: Handles both function refs and object refs
+- **Children management**: Attaches/detaches child objects from the scene graph
+- **Automatic disposal**: Cleans up the object when the component unmounts
+- **Special props**: Processes `onUpdate` callbacks after prop applications
+
+**Advanced usage:**
+
+```tsx
+import { createMemo, createRenderEffect, onCleanup } from "solid-js"
+import { useProps, useThree } from "solid-three"
+import { Mesh, SphereGeometry, MeshStandardMaterial } from "three"
+
+export function OrbitControls(props: S3.Props<typeof ThreeOrbitControls>) {
+  const three = useThree()
+  const controls = createMemo<ThreeOrbitControls>(previous => {
+    const controls = autodispose(new ThreeOrbitControls(three.camera))
+    controls.connect(three.gl.domElement)
+    return controls
+  })
+
+  useFrame(() => controls().update())
+
+  useProps(controls, rest)
+
+  return null!
+}
+```
+
 ## Utilities
 
 ### autodispose
@@ -548,23 +616,17 @@ function ConditionalMesh() {
 
 `solid-three` provides a comprehensive event system that integrates `three.js` pointer and mouse events with `solid-js`' reactivity. Events are automatically handled through raycasting and support stopping propagation.
 
-### Controlling Raycasting with pointerEvents
+### Controlling Raycasting with raycastable
 
-The `pointerEvents` prop controls whether an Object3D can be targeted by raycasting:
+The `raycastable` prop controls whether an Object3D can be targeted by raycasting:
 
-- **pointerEvents** (`boolean`): When set to `false`, the object will not be hit by rays, but can still receive events through propagation from its descendants. Default is `true`.
+- **raycastable** (`boolean`): When set to `false`, the object will not be hit by rays, but can still receive events through propagation from its descendants. Default is `true`.
 
 ```tsx
-// Object won't be hit by rays but children can still be interactive
-<T.Group pointerEvents={false}>
-  <T.Mesh onClick={() => console.log("Child clicked!")}>
-    <T.BoxGeometry />
-    <T.MeshBasicMaterial />
-  </T.Mesh>
-</T.Group>
+<T.Mesh name="parent" raycastable={false} onClick={() => console.log("Child clicked!")}>
+  <T.Mesh name="child" />
+</T.Mesh>
 ```
-
-This is useful for creating invisible containers or optimizing performance by excluding objects from raycasting calculations.
 
 ### Supported Events
 
@@ -804,108 +866,6 @@ solid-three's hover event handling differs from react-three-fiber in several key
 - **react-three-fiber**: When moving from child to parent, the parent receives both leave and immediate re-enter events
 </details>
 
-## TypeScript Support
-
-`solid-three` provides comprehensive TypeScript support through the `S3` namespace, which contains all type definitions for working with `three.js` in a type-safe manner.
-
-### Core Types
-
-```tsx
-import type { S3 } from "solid-three"
-import type * as THREE from "three"
-
-// Component types
-type MeshComponent = S3.Component<THREE.Mesh>
-type BoxProps = S3.Props<THREE.BoxGeometry>
-
-// Instance types - `three.js` objects augmented with solid-three metadata
-type AugmentedMesh = S3.Instance<THREE.Mesh>
-
-// Generic Three instance
-type AnyInstance = S3.ThreeInstance
-
-// Camera types
-type Camera = S3.CameraType // PerspectiveCamera | OrthographicCamera
-```
-
-### Props Types
-
-```tsx
-import type { S3 } from "solid-three"
-
-// Get props type for a specific `three.js` class
-type MeshProps = S3.Props<THREE.Mesh>
-type MaterialProps = S3.Props<THREE.MeshStandardMaterial>
-
-// Using in components
-const MyMesh = (props: MeshProps) => {
-  return <T.Mesh {...props} />
-}
-```
-
-### Event Types
-
-```tsx
-// Event handler types
-type ClickHandler = S3.EventHandlers["onClick"]
-type PointerHandler = S3.EventHandlers["onPointerMove"]
-
-// Event object type
-const handleClick: ClickHandler = (event: S3.Event<MouseEvent>) => {
-  console.log(event.point) // Vector3
-  console.log(event.distance) // number
-  event.stopPropagation()
-}
-
-// All event names
-type EventName = S3.EventName // "onClick" | "onPointerMove" | ...
-```
-
-### Representation Types
-
-These types represent how `three.js` objects can be specified in props:
-
-```tsx
-// Vector representations - can be arrays or `three.js` objects
-type Position = S3.Vector3 // [x, y, z] | Vector3 | { x, y, z }
-type Scale = S3.Vector3
-
-// Color representation
-type Color = S3.Color // string | number | Color | [r, g, b]
-
-// Rotation representations
-type Rotation = S3.Euler // [x, y, z] | Euler
-type Quaternion = S3.Quaternion // [x, y, z, w] | Quaternion
-
-// Other representations
-type Layers = S3.Layers // number | Layers
-type Matrix = S3.Matrix4 // number[] | Matrix4
-```
-
-### Context Type
-
-```tsx
-// The full context returned by useThree
-type Context = S3.Context
-
-const MyComponent = () => {
-  const context: Context = useThree()
-
-  // All properties are properly typed
-  context.camera // Camera
-  context.gl // WebGLRenderer
-  context.pointer // Vector2
-  // ... etc
-}
-```
-
-### Metadata Type
-
-```tsx
-// Access instance metadata
-type Metadata = S3.Metadata<Mesh>
-```
-
 ## Performance Optimization
 
 `solid-three` provides several mechanisms to optimize rendering performance:
@@ -946,6 +906,8 @@ const ManualDisposal = () => {
   return <T.BoxGeometry ref={geometry} />
 }
 ```
+
+or use the [`autodispose()`-utility](#autodispose)
 
 ### Frame Loop Control
 
@@ -1107,21 +1069,6 @@ While `solid-three` is heavily inspired by– and initially shared a lot of code
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTION.md) for details on how to get started.
-
-### Dev Container
-
-If you are using VSCode on windows (or just prefer to develope in a container), you can use the included dev container to get started quickly.
-
-1. Clone this repo to a directory _inside of your wsl instance_ such as `~/Github`
-2. Navigate to the `solid-three` directory and run `code .`
-3. Open the workspace from the provided file.
-4. Make sure the [DevContainers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension is installed Click the bottom left corner of the window and select `Reopen in Container` - if the extension is installed, vscode should prompt you to open the project in a dev container when you open the workspace file.
-
-#### Dev Container Notes
-
-- We clone into the `wsl` instance because the dev container is running a linux container, and the windows filesystem will cause extreme performance loss due to IO overhead.
-- If you are using a different shell, you may need to modify the `devcontainer.json` file to use your shell of choice.
-- A port will automatically be forwarded when you run the project in dev mode, so you can access the dev server from your browser on windows at `localhost:<port>` - the port will be displayed in the terminal when you run the project. This can be configured by you as well.
 
 ## License
 
