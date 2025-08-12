@@ -1,33 +1,18 @@
-import { type Accessor, type Resource, createContext, createResource, useContext } from "solid-js"
+import {
+  type Accessor,
+  type Resource,
+  children,
+  createContext,
+  createRenderEffect,
+  createResource,
+  onCleanup,
+  splitProps,
+  untrack,
+  useContext,
+} from "solid-js"
+import { applyProps } from "./props.ts"
 import type { Context } from "./types"
-
-/**********************************************************************************/
-/*                                                                                */
-/*                                    Use Three                                   */
-/*                                                                                */
-/**********************************************************************************/
-
-export const threeContext = createContext<Context>(null!)
-
-/**
- * Custom hook to access all necessary Three.js objects needed to manage a 3D scene.
- * This hook must be used within a component that is a descendant of the `<Canvas/>` component.
- *
- * @template T The expected return type after applying the callback to the context.
- * @param [callback] - Optional callback function that processes and returns a part of the context.
- * @returns Returns `Context` directly, or as a selector if a callback is provided.
- * @throws Throws an error if used outside of the Canvas component context.
- */
-export function useThree(): Context
-export function useThree<T>(callback: (value: Context) => T): Accessor<T>
-export function useThree(callback?: (value: Context) => any) {
-  const store = useContext(threeContext)
-  if (!store) {
-    throw new Error("S3: Hooks can only be used within the Canvas component!")
-  }
-  if (callback) return () => callback(store)
-  return store
-}
+import { check } from "./utils/conditionals.ts"
 
 /**********************************************************************************/
 /*                                                                                */
@@ -129,4 +114,83 @@ export function useLoader<
   return resource as /* TArgs extends  LoaderUrl<TLoader>
     ? Resource<LoaderResult<TLoader>>
     : */ Resource<{ [K in keyof TArgs]: LoaderResult<TLoader> }>
+}
+
+/**********************************************************************************/
+/*                                                                                */
+/*                                    Use Props                                   */
+/*                                                                                */
+/**********************************************************************************/
+
+/**
+ * Manages and applies `solid-three` props to its Three.js object. This function sets up reactive effects
+ * to ensure that properties are correctly applied and updated in response to changes. It also manages the
+ * attachment of children and the disposal of the object.
+ *
+ * @template T - The type of the augmented element.
+ * @param object - An accessor function that returns the target object to which properties will be applied.
+ * @param props - An object containing the props to apply. This includes both direct properties
+ *                and special properties like `ref` and `children`.
+ */
+export function useProps<T extends object>(object: Accessor<T>, props: any) {
+  const [local, instanceProps] = splitProps(props, ["ref", "args", "object", "attach", "children"])
+
+  // Assign ref
+  createRenderEffect(() => {
+    if (local.ref instanceof Function) local.ref(object())
+    else local.ref = object()
+  })
+
+  createRenderEffect(() => {
+    if ("children" in props) {
+      // Connect or attach children to THREE-instance
+      const childrenAccessor = children(() => props.children)
+      // @ts-expect-error TODO: fix type-error
+      manageSceneGraph(object(), childrenAccessor as unknown as Accessor<Instance>)
+    }
+  })
+
+  // Apply the props to THREE-instance
+  createRenderEffect(() => {
+    applyProps(object(), instanceProps)
+    // NOTE: see "onUpdate should not update itself"-test
+    untrack(() => props.onUpdate)?.(object())
+  })
+
+  // Automatically dispose
+  onCleanup(() =>
+    check(object, object => {
+      if ("dispose" in object && typeof object.dispose === "function") {
+        object.dispose()
+      }
+    }),
+  )
+}
+
+/**********************************************************************************/
+/*                                                                                */
+/*                                    Use Three                                   */
+/*                                                                                */
+/**********************************************************************************/
+
+export const threeContext = createContext<Context>(null!)
+
+/**
+ * Custom hook to access all necessary Three.js objects needed to manage a 3D scene.
+ * This hook must be used within a component that is a descendant of the `<Canvas/>` component.
+ *
+ * @template T The expected return type after applying the callback to the context.
+ * @param [callback] - Optional callback function that processes and returns a part of the context.
+ * @returns Returns `Context` directly, or as a selector if a callback is provided.
+ * @throws Throws an error if used outside of the Canvas component context.
+ */
+export function useThree(): Context
+export function useThree<T>(callback: (value: Context) => T): Accessor<T>
+export function useThree(callback?: (value: Context) => any) {
+  const store = useContext(threeContext)
+  if (!store) {
+    throw new Error("S3: Hooks can only be used within the Canvas component!")
+  }
+  if (callback) return () => callback(store)
+  return store
 }

@@ -1,12 +1,4 @@
-import {
-  type Accessor,
-  children,
-  createRenderEffect,
-  mapArray,
-  onCleanup,
-  splitProps,
-  untrack,
-} from "solid-js"
+import { type Accessor, createRenderEffect, mapArray, onCleanup } from "solid-js"
 import {
   BufferGeometry,
   Color,
@@ -24,58 +16,6 @@ import { useThree } from "./hooks.ts"
 import { addToEventListeners, useCanvasProps } from "./internal-context.ts"
 import type { Instance } from "./types.ts"
 import { hasColorSpace, isInstance, resolve } from "./utils.ts"
-import { check } from "./utils/conditionals.ts"
-
-/**********************************************************************************/
-/*                                                                                */
-/*                                  Manage Props                                  */
-/*                                                                                */
-/**********************************************************************************/
-
-/**
- * Manages and applies `solid-three` props to its Three.js object. This function sets up reactive effects
- * to ensure that properties are correctly applied and updated in response to changes. It also manages the
- * attachment of children and the disposal of the object.
- *
- * @template T - The type of the augmented element.
- * @param object - An accessor function that returns the target object to which properties will be applied.
- * @param props - An object containing the props to apply. This includes both direct properties
- *                and special properties like `ref` and `children`.
- */
-export function useProps<T extends object>(object: Accessor<T>, props: any) {
-  const [local, instanceProps] = splitProps(props, ["ref", "args", "object", "attach", "children"])
-
-  // Assign ref
-  createRenderEffect(() => {
-    if (local.ref instanceof Function) local.ref(object())
-    else local.ref = object()
-  })
-
-  createRenderEffect(() => {
-    if ("children" in props) {
-      // Connect or attach children to THREE-instance
-      const childrenAccessor = children(() => props.children)
-      // @ts-expect-error TODO: fix type-error
-      manageSceneGraph(object(), childrenAccessor as unknown as Accessor<Instance>)
-    }
-  })
-
-  // Apply the props to THREE-instance
-  createRenderEffect(() => {
-    applyProps(object(), instanceProps)
-    // NOTE: see "onUpdate should not update itself"-test
-    untrack(() => props.onUpdate)?.(object())
-  })
-
-  // Automatically dispose
-  onCleanup(() =>
-    check(object, object => {
-      if ("dispose" in object && typeof object.dispose === "function") {
-        object.dispose()
-      }
-    }),
-  )
-}
 
 /**********************************************************************************/
 /*                                                                                */

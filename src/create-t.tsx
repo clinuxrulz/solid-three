@@ -1,5 +1,5 @@
 import { createMemo, type JSX, mergeProps } from "solid-js"
-import { useProps } from "./props.ts"
+import { useProps } from "./hooks.ts"
 import type { Component } from "./types.ts"
 import { augment } from "./utils.ts"
 
@@ -24,7 +24,7 @@ export function createT<TCatalogue extends Record<string, unknown>>(catalogue: T
         if (!constructor) return undefined
 
         /* Otherwise, create and memoize a component for that constructor. */
-        cache.set(name, createTComponent(constructor))
+        cache.set(name, createEntity(constructor))
       }
 
       return cache.get(name)
@@ -33,18 +33,18 @@ export function createT<TCatalogue extends Record<string, unknown>>(catalogue: T
 }
 
 /**
- * Creates a ThreeComponent instance for a given source constructor.
+ * Creates an Entity-instance from a given source constructor.
  *
- * @template TSource The source constructor type.
- * @param source - The constructor from which the component will be created.
+ * @template TConstructor The source constructor type.
+ * @param Constructor - The constructor from which the component will be created.
  * @returns The created component.
  */
-export function createTComponent<TSource>(source: TSource): Component<TSource> {
+export function createEntity<TConstructor>(Constructor: TConstructor): Component<TConstructor> {
   return (props: any) => {
     const merged = mergeProps({ args: [] }, props)
     const memo = createMemo(() => {
       try {
-        return augment(new (source as any)(...merged.args), { props })
+        return augment(new (Constructor as any)(...merged.args), { props })
       } catch (e) {
         console.error(e)
         throw new Error("")
