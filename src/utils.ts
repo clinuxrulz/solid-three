@@ -12,7 +12,7 @@ import type { Instance } from "./types"
 /**********************************************************************************/
 
 export function autodispose<T extends { dispose(): void }>(object: T): T {
-  onCleanup(object.dispose)
+  onCleanup(object.dispose.bind(object))
   return object
 }
 
