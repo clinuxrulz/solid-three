@@ -7,8 +7,8 @@ import {
   splitProps,
 } from "solid-js"
 import { Object3D } from "three"
-import { threeContext, useProps, useThree } from "./hooks.ts"
-import { manageSceneGraph } from "./props.ts"
+import { threeContext, useThree } from "./hooks.ts"
+import { manageSceneGraph, useProps } from "./props.ts"
 import type { Constructor, Instance, Overwrite, Props } from "./types.ts"
 import { type InstanceFromConstructor } from "./types.ts"
 import { augment, autodispose, isConstructor, isInstance, withContext } from "./utils.ts"
