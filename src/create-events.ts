@@ -100,8 +100,8 @@ function raycast<TNativeEvent extends MouseEvent | WheelEvent>(
   nativeEvent: TNativeEvent,
 ): Intersection<Instance<Object3D>>[] {
   context.setPointer(pointer => {
-    pointer.x = (nativeEvent.offsetX / globalThis.innerWidth) * 2 - 1
-    pointer.y = -(nativeEvent.offsetY / globalThis.innerHeight) * 2 + 1
+    pointer.x = (nativeEvent.offsetX / context.bounds.width) * 2 - 1
+    pointer.y = -(nativeEvent.offsetY / context.bounds.height) * 2 + 1
     return pointer
   })
   context.raycaster.setFromCamera(context.pointer, context.camera)
