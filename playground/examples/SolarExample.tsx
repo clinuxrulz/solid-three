@@ -116,10 +116,9 @@ function CelestialBody(
   )
 }
 
-export function SimpleSolarExample() {
+export function SolarExample() {
   return (
     <Canvas
-      style={{ width: "100vw", height: "100vh" }}
       camera={{ position: new THREE.Vector3(0, 0, 30) }}
       onClick={event => console.debug("canvas clicked", event)}
       onClickMissed={event => console.debug("canvas click missed", event)}
@@ -129,9 +128,7 @@ export function SimpleSolarExample() {
       <OrbitControls />
       <T.AmbientLight intensity={0.2} />
       <T.PointLight position={[0, 0, 0]} intensity={2} />
-
       <T.Group rotation={[0, 0, Math.PI / 2]}>
-        {/* Sun */}
         <CelestialBody name="sun" radius={1.5} color="#FDB813">
           <CelestialBody name="earth" radius={0.5} color="#1E90FF" orbit={[8, 6]}>
             <CelestialBody

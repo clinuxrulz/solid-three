@@ -3,7 +3,7 @@ import { Canvas, createT, Entity, Portal } from "../../src/index.ts"
 
 const T = createT(THREE)
 
-export function SimplePortal() {
+export function PortalExample() {
   const group = new THREE.Group()
   return (
     <Canvas

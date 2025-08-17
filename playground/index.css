@@ -3,3 +3,7 @@ body {
   margin: 0px;
   font-family: arial;
 }
+
+#root {
+  height: 100vh;
+}

@@ -2,8 +2,9 @@ import { A, Route, Router } from "@solidjs/router"
 import type { ParentProps } from "solid-js"
 import * as THREE from "three"
 import { Canvas, createT } from "../src/index.ts"
-import { SimplePortal } from "./examples/SimplePortal.tsx"
-import { SimpleSolarExample } from "./examples/SimpleSolar.tsx"
+import { EnvironmentExample } from "./examples/EnvironmentExample.tsx"
+import { PortalExample } from "./examples/PortalExample.tsx"
+import { SolarExample } from "./examples/SolarExample.tsx"
 import "./index.css"
 
 const T = createT(THREE)
@@ -55,6 +56,17 @@ function Layout(props: ParentProps) {
         >
           Portal
         </A>
+        <A
+          href="/environment"
+          style={{
+            color: "white",
+            "text-decoration": "none",
+            padding: "5px 10px",
+            display: "block",
+          }}
+        >
+          Environment
+        </A>
       </nav>
       {props.children}
     </>
@@ -64,8 +76,9 @@ function Layout(props: ParentProps) {
 export function App() {
   return (
     <Router root={Layout}>
-      <Route path="/simple-solar" component={SimpleSolarExample} />
-      <Route path="/portal" component={SimplePortal} />
+      <Route path="/simple-solar" component={SolarExample} />
+      <Route path="/portal" component={PortalExample} />
+      <Route path="/environment" component={EnvironmentExample} />
       <Route
         path="/"
         component={() => (
