@@ -1,9 +1,7 @@
-import { Show, Suspense } from "solid-js"
 import { buildGraph } from "src/utils.ts"
 import * as THREE from "three"
-import { GLTFLoader } from "three-stdlib"
-import { describe, expect, it, vi } from "vitest"
-import { createT, useFrame, useLoader, useThree } from "../../src/index.ts"
+import { describe, expect, it } from "vitest"
+import { createT, useFrame, useThree } from "../../src/index.ts"
 import { test } from "../../src/testing/index.tsx"
 import type { Context } from "../../src/types.ts"
 import { asyncUtils } from "../utils/async-utils.ts"
@@ -24,7 +22,7 @@ describe("hooks", () => {
 
     test(() => <Component />)
 
-    expect(result.camera instanceof THREE.Camera).toBeTruthy()
+    expect(result.currentCamera instanceof THREE.Camera).toBeTruthy()
     expect(result.scene instanceof THREE.Scene).toBeTruthy()
     expect(result.raycaster instanceof THREE.Raycaster).toBeTruthy()
     // expect(result.size).toEqual({ height: 0, width: 0, top: 0, left: 0, updateStyle: false });
@@ -59,115 +57,115 @@ describe("hooks", () => {
     expect(frameCalls.length).toBeGreaterThan(0)
   })
 
-  it("can handle useLoader hook", async () => {
-    const MockMesh = new THREE.Mesh()
-    const mockLoad = vi.fn().mockImplementation((_url, onLoad) => onLoad(MockMesh))
-    class mockGLTFLoader extends GLTFLoader {
-      constructor() {
-        super()
-      }
-      load = mockLoad
-    }
+  // it("can handle useLoader hook", async () => {
+  //   const MockMesh = new THREE.Mesh()
+  //   const mockLoad = vi.fn().mockImplementation((_url, onLoad) => onLoad(MockMesh))
+  //   class mockGLTFLoader extends GLTFLoader {
+  //     constructor() {
+  //       super()
+  //     }
+  //     load = mockLoad
+  //   }
 
-    const Component = () => {
-      const model = useLoader(mockGLTFLoader, () => "/suzanne.glb")
-      // @ts-expect-error TODO: fix type-error
-      return <Show when={model()}>{model => <Primitive object={model()} />}</Show>
-    }
+  //   const Component = () => {
+  //     const model = useLoader(mockGLTFLoader, () => "/suzanne.glb")
+  //     // @ts-expect-error TODO: fix type-error
+  //     return <Show when={model()}>{model => <Primitive object={model()} />}</Show>
+  //   }
 
-    const scene = test(() => (
-      <Suspense fallback={null}>
-        <Component />
-      </Suspense>
-    )).scene
+  //   const scene = test(() => (
+  //     <Suspense fallback={null}>
+  //       <Component />
+  //     </Suspense>
+  //   )).scene
 
-    await waitFor(() => expect(scene.children[0]).toBeDefined())
+  //   await waitFor(() => expect(scene.children[0]).toBeDefined())
 
-    expect(scene.children[0]).toBe(MockMesh)
-  })
+  //   expect(scene.children[0]).toBe(MockMesh)
+  // })
 
-  it("can handle useLoader hook with an array of strings", async () => {
-    const MockMesh = new THREE.Mesh()
+  // it("can handle useLoader hook with an array of strings", async () => {
+  //   const MockMesh = new THREE.Mesh()
 
-    const MockGroup = new THREE.Group()
-    const mat1 = new THREE.MeshBasicMaterial()
-    mat1.name = "Mat 1"
-    const mesh1 = new THREE.Mesh(new THREE.BoxGeometry(2, 2), mat1)
-    mesh1.name = "Mesh 1"
-    const mat2 = new THREE.MeshBasicMaterial()
-    mat2.name = "Mat 2"
-    const mesh2 = new THREE.Mesh(new THREE.BoxGeometry(2, 2), mat2)
-    mesh2.name = "Mesh 2"
-    MockGroup.add(mesh1, mesh2)
+  //   const MockGroup = new THREE.Group()
+  //   const mat1 = new THREE.MeshBasicMaterial()
+  //   mat1.name = "Mat 1"
+  //   const mesh1 = new THREE.Mesh(new THREE.BoxGeometry(2, 2), mat1)
+  //   mesh1.name = "Mesh 1"
+  //   const mat2 = new THREE.MeshBasicMaterial()
+  //   mat2.name = "Mat 2"
+  //   const mesh2 = new THREE.Mesh(new THREE.BoxGeometry(2, 2), mat2)
+  //   mesh2.name = "Mesh 2"
+  //   MockGroup.add(mesh1, mesh2)
 
-    class mockGLTFLoader extends GLTFLoader {
-      constructor() {
-        super()
-      }
-      load = vi
-        .fn()
-        .mockImplementationOnce((_url, onLoad) => {
-          onLoad(MockMesh)
-        })
-        .mockImplementationOnce((_url, onLoad) => {
-          onLoad({ scene: MockGroup })
-        })
-    }
+  //   class mockGLTFLoader extends GLTFLoader {
+  //     constructor() {
+  //       super()
+  //     }
+  //     load = vi
+  //       .fn()
+  //       .mockImplementationOnce((_url, onLoad) => {
+  //         onLoad(MockMesh)
+  //       })
+  //       .mockImplementationOnce((_url, onLoad) => {
+  //         onLoad({ scene: MockGroup })
+  //       })
+  //   }
 
-    const Component = () => {
-      const resource = useLoader(
-        mockGLTFLoader,
-        () => ["/suzanne.glb", "/myModels.glb"],
-        loader => {
-          loader.setPath("/public/models")
-        },
-      )
+  //   const Component = () => {
+  //     const resource = useLoader(
+  //       mockGLTFLoader,
+  //       () => ["/suzanne.glb", "/myModels.glb"],
+  //       loader => {
+  //         loader.setPath("/public/models")
+  //       },
+  //     )
 
-      return (
-        <Show when={resource()} keyed>
-          {([mockMesh, mockScene]) => (
-            <>
-              {/* @ts-expect-error TODO: fix type-error */}
-              <Primitive object={mockMesh} />
-              {/* @ts-expect-error TODO: fix type-error */}
-              <Primitive object={mockScene} />
-            </>
-          )}
-        </Show>
-      )
-    }
+  //     return (
+  //       <Show when={resource()} keyed>
+  //         {([mockMesh, mockScene]) => (
+  //           <>
+  //             {/* @ts-expect-error TODO: fix type-error */}
+  //             <Primitive object={mockMesh} />
+  //             {/* @ts-expect-error TODO: fix type-error */}
+  //             <Primitive object={mockScene} />
+  //           </>
+  //         )}
+  //       </Show>
+  //     )
+  //   }
 
-    let scene = test(() => (
-      <Suspense fallback={null}>
-        <Component />
-      </Suspense>
-    )).scene
+  //   let scene = test(() => (
+  //     <Suspense fallback={null}>
+  //       <Component />
+  //     </Suspense>
+  //   )).scene
 
-    await waitFor(() => expect(scene.children[0]).toBeDefined())
+  //   await waitFor(() => expect(scene.children[0]).toBeDefined())
 
-    expect(scene.children[0]).toBe(MockMesh)
-  })
+  //   expect(scene.children[0]).toBe(MockMesh)
+  // })
 
-  it("can handle useLoader with a loader extension", async () => {
-    class Loader extends THREE.Loader {
-      load = (_url: string) => null
-    }
+  // it("can handle useLoader with a loader extension", async () => {
+  //   class Loader extends THREE.Loader {
+  //     load = (_url: string) => null
+  //   }
 
-    let proto!: Loader
+  //   let proto!: Loader
 
-    function Test() {
-      useLoader(
-        Loader,
-        () => "",
-        loader => (proto = loader),
-      )
-      return <></>
-    }
+  //   function Test() {
+  //     useLoader(
+  //       Loader,
+  //       () => "",
+  //       loader => (proto = loader),
+  //     )
+  //     return <></>
+  //   }
 
-    test(() => <Test />)
+  //   test(() => <Test />)
 
-    expect(proto).toBeInstanceOf(Loader)
-  })
+  //   expect(proto).toBeInstanceOf(Loader)
+  // })
 
   it("can handle buildGraph utility", async () => {
     const group = new THREE.Group()

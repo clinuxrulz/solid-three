@@ -1,17 +1,22 @@
 import {
+  type Accessor,
   type JSX,
+  type JSXElement,
   type ParentProps,
+  Show,
   createMemo,
   createRenderEffect,
+  createResource,
   mergeProps,
   splitProps,
 } from "solid-js"
 import { Object3D } from "three"
 import { threeContext, useThree } from "./hooks.ts"
 import { manageSceneGraph, useProps } from "./props.ts"
-import type { Constructor, Instance, Overwrite, Props } from "./types.ts"
+import type { Constructor, Instance, Loader, Overwrite, Props } from "./types.ts"
 import { type InstanceFromConstructor } from "./types.ts"
-import { augment, autodispose, isConstructor, isInstance, withContext } from "./utils.ts"
+import { augment, autodispose, isConstructor, isInstance, load, withContext } from "./utils.ts"
+import { whenMemo } from "./utils/conditionals.ts"
 
 /**********************************************************************************/
 /*                                                                                */
@@ -68,7 +73,7 @@ export const Portal = (props: PortalProps) => {
 type EntityProps<T extends object | Constructor<object>> = Overwrite<
   Props<T>,
   {
-    from: T
+    from: T | undefined
   }
 >
 /**
@@ -82,14 +87,52 @@ type EntityProps<T extends object | Constructor<object>> = Overwrite<
  */
 export function Entity<T extends object | Constructor<object>>(props: EntityProps<T>) {
   const [config, rest] = splitProps(props, ["from", "args"])
-  const memo = createMemo(() => {
-    return augment(
-      isConstructor(config.from)
-        ? autodispose(new config.from(...(config.args ?? [])))
-        : config.from,
-      { props },
-    ) as Instance<T>
-  })
+  const memo = whenMemo(
+    () => config.from,
+    from => {
+      const instance = augment(
+        isConstructor(from) ? autodispose(new from(...(config.args ?? []))) : from,
+        {
+          props,
+        },
+      ) as Instance<T>
+      return instance
+    },
+  )
   useProps(memo, rest)
   return memo as unknown as JSX.Element
+}
+
+/**********************************************************************************/
+/*                                                                                */
+/*                                     Resource                                   */
+/*                                                                                */
+/**********************************************************************************/
+
+type ResourceProps<TSource, TResult extends object> = Omit<Props<TResult>, "children"> & {
+  loader: new () => Loader<TSource, TResult>
+  url: TSource
+  path?: string
+  children?: (result: Accessor<TResult>) => JSXElement
+}
+
+export function Resource<TSource, TResult extends object>(props: ResourceProps<TSource, TResult>) {
+  const [config, rest] = splitProps(props, ["loader", "path", "url"])
+  const loader = createMemo(() => new config.loader())
+  const [resource] = createResource(
+    () => [config.url, loader(), config.path] as const,
+    ([url, loader, path]) => {
+      loader.setPath?.(path ?? "")
+      return load(loader, url) as Promise<TResult>
+    },
+  )
+  return (
+    <Show
+      when={"children" in props && resource()}
+      // @ts-expect-error FIXME
+      fallback={<Entity from={resource()} {...rest} />}
+    >
+      {resource => props.children?.(resource)}
+    </Show>
+  )
 }

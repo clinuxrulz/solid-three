@@ -1,4 +1,4 @@
-import { type Accessor, type Resource, createContext, createResource, useContext } from "solid-js"
+import { type Accessor, createContext, useContext } from "solid-js"
 import type { Context } from "./types"
 
 /**********************************************************************************/
@@ -23,84 +23,6 @@ export const useFrame = (callback: (context: Context, delta: number, frame?: XRF
     throw new Error("S3: Hooks can only be used within the Canvas component!")
   }
   addFrameListener(callback)
-}
-
-/**********************************************************************************/
-/*                                                                                */
-/*                                   Use Loader                                   */
-/*                                                                                */
-/**********************************************************************************/
-
-type Loader<TSource = any, TResult = any, TReturnValue = any> = {
-  load: (
-    url: TSource,
-    onLoad: (result: TResult) => void,
-    onProgress: (() => void) | undefined,
-    onReject: ((error: ErrorEvent | unknown) => void) | undefined,
-  ) => TReturnValue
-}
-type LoaderUrl<T extends Loader> = Parameters<T["load"]>[0]
-type LoaderResult<T extends Loader> = Parameters<Parameters<T["load"]>[1]>[0]
-
-type LoaderCache<T = Loader<any>> = { loader: T; resources: {} }
-const LOADER_CACHE = new Map<any, LoaderCache>()
-
-/**
- * Hook to create and manage a resource using a Three.js loader. It ensures that the loader is
- * reused if it has been instantiated before, and manages the resource lifecycle automatically.
- *
- * @template TResult The type of the resolved data when the loader completes loading.
- * @template TArg The argument type expected by the loader function.
- * @param Constructor - The loader class constructor.
- * @param args - The arguments to be passed to the loader function, wrapped in an accessor to enable reactivity.
- * @returns An accessor containing the loaded resource, re-evaluating when inputs change.
- */
-export function useLoader<
-  const TLoader extends Loader,
-  const TArgs extends LoaderUrl<TLoader> | Array<LoaderUrl<TLoader>>,
->(
-  Constructor: new (...args: any[]) => TLoader,
-  args: Accessor<TArgs>,
-  setup?: (loader: NoInfer<TLoader>) => void,
-) {
-  let cache = LOADER_CACHE.get(Constructor) as LoaderCache<TLoader>
-  if (!cache) {
-    cache = {
-      loader: new Constructor(),
-      resources: {},
-    }
-    LOADER_CACHE.set(Constructor, cache)
-  }
-  const { loader, resources } = cache
-  setup?.(loader)
-
-  const load = (arg: string) => {
-    // @ts-expect-error TODO: fix type-error
-    if (resources[arg]) return resources[arg]
-    // @ts-expect-error TODO: fix type-error
-    return (resources[arg] = new Promise((resolve, reject) =>
-      loader.load(
-        arg,
-        value => {
-          // @ts-expect-error TODO: fix type-error
-          resources[arg] = value
-          resolve(value)
-        },
-        undefined,
-        reject,
-      ),
-    ))
-  }
-
-  const [resource] = createResource(args, args =>
-    Array.isArray(args)
-      ? Promise.all((args as string[]).map(arg => load(arg)))
-      : load(args as string),
-  )
-
-  return resource as /* TArgs extends  LoaderUrl<TLoader>
-    ? Resource<LoaderResult<TLoader>>
-    : */ Resource<{ [K in keyof TArgs]: LoaderResult<TLoader> }>
 }
 
 /**********************************************************************************/

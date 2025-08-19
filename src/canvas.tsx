@@ -1,11 +1,5 @@
-import {
-  type JSX,
-  type ParentProps,
-  type Ref,
-  createRenderEffect,
-  onCleanup,
-  onMount,
-} from "solid-js"
+import { createResizeObserver } from "@solid-primitives/resize-observer"
+import { onMount, type JSX, type ParentProps, type Ref } from "solid-js"
 import {
   Camera,
   OrthographicCamera,
@@ -15,7 +9,8 @@ import {
   WebGLRenderer,
 } from "three"
 import { createThree } from "./create-three.tsx"
-import type { EventHandlers, Props } from "./types.ts"
+import type { EventRaycaster } from "./raycasters.tsx"
+import type { Context, EventHandlers, Props } from "./types.ts"
 
 /**
  * Props for the Canvas component, which initializes the Three.js rendering context and acts as the root for your 3D scene.
@@ -23,7 +18,9 @@ import type { EventHandlers, Props } from "./types.ts"
 export interface CanvasProps extends ParentProps<Partial<EventHandlers>> {
   class?: string
   /** Configuration for the camera used in the scene. */
-  camera?: Partial<Props<PerspectiveCamera> | Props<OrthographicCamera>> | Camera
+  defaultCamera?: Partial<Props<PerspectiveCamera> | Props<OrthographicCamera>> | Camera
+  /** Configuration for the Scene instance. */
+  scene?: Partial<Props<Scene>> | Scene
   /** Element to render while the main content is loading asynchronously.  */
   fallback?: JSX.Element
   /** Options for the WebGLRenderer or a function returning a customized renderer. */
@@ -34,10 +31,8 @@ export interface CanvasProps extends ParentProps<Partial<EventHandlers>> {
   /** Toggles between Orthographic and Perspective camera. */
   orthographic?: boolean
   /** Configuration for the Raycaster used for mouse and pointer events. */
-  raycaster?: Partial<Props<Raycaster>> | Raycaster
-  ref?: Ref<HTMLDivElement>
-  /** Configuration for the Scene instance. */
-  scene?: Partial<Props<Scene>> | Scene
+  raycaster?: Partial<Props<EventRaycaster>> | EventRaycaster | Raycaster
+  ref?: Ref<Context>
   /** Custom CSS styles for the canvas container. */
   style?: JSX.CSSProperties
   /** Enables and configures shadows in the scene. */
@@ -68,32 +63,22 @@ export function Canvas(props: ParentProps<CanvasProps>) {
     const context = createThree(canvas, props)
 
     // Resize observer for the canvas to adjust camera and renderer on size change
-    function onResize() {
+    createResizeObserver(container, function onResize() {
       const { width, height } = container.getBoundingClientRect()
       context.gl.setSize(width, height)
       context.gl.setPixelRatio(globalThis.devicePixelRatio)
 
-      if (context.camera instanceof OrthographicCamera) {
-        context.camera.left = width / -2
-        context.camera.right = width / 2
-        context.camera.top = height / 2
-        context.camera.bottom = height / -2
+      if (context.currentCamera instanceof OrthographicCamera) {
+        context.currentCamera.left = width / -2
+        context.currentCamera.right = width / 2
+        context.currentCamera.top = height / 2
+        context.currentCamera.bottom = height / -2
       } else {
-        context.camera.aspect = width / height
+        context.currentCamera.aspect = width / height
       }
 
-      context.camera.updateProjectionMatrix()
+      context.currentCamera.updateProjectionMatrix()
       context.render(performance.now())
-    }
-    const observer = new ResizeObserver(onResize)
-    observer.observe(container)
-    onResize()
-    onCleanup(() => observer.disconnect())
-
-    // Assign ref
-    createRenderEffect(() => {
-      if (props.ref instanceof Function) props.ref(container)
-      else props.ref = container
     })
   })
 
@@ -105,12 +90,13 @@ export function Canvas(props: ParentProps<CanvasProps>) {
         width: "100%",
         height: "100%",
         overflow: "hidden",
+        contain: "strict",
         display: "flex",
         ...props.style,
       }}
       class={props.class}
     >
-      <canvas ref={canvas!} style={{ width: "100%", height: "100%" }} />
+      <canvas ref={canvas!} />
     </div>
   )
 }

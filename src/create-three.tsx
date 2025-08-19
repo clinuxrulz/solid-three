@@ -3,7 +3,6 @@ import {
   createEffect,
   createMemo,
   createRenderEffect,
-  createSignal,
   mergeProps,
   onCleanup,
 } from "solid-js"
@@ -19,28 +18,32 @@ import {
   PerspectiveCamera,
   Raycaster,
   Scene,
+  Vector3,
   VSMShadowMap,
-  Vector2,
   WebGLRenderer,
 } from "three"
 import type { CanvasProps } from "./canvas.tsx"
 import { createEvents } from "./create-events.ts"
-import { AugmentedStack } from "./data-structure/augmented-stack.ts"
+import { Stack } from "./data-structure/stack.ts"
 import { frameContext, threeContext } from "./hooks.ts"
-import { canvasPropsContext, eventContext } from "./internal-context.ts"
+import { eventContext } from "./internal-context.ts"
 import { manageSceneGraph, useProps } from "./props.ts"
-import type { CameraType, Context } from "./types.ts"
-import { augment, defaultProps, removeElementFromArray, withMultiContexts } from "./utils.ts"
+import { CursorRaycaster, type EventRaycaster } from "./raycasters.tsx"
+import type { CameraKind, Context } from "./types.ts"
+import {
+  augment,
+  defaultProps,
+  getCurrentViewport,
+  removeElementFromArray,
+  useRef,
+  withMultiContexts,
+} from "./utils.ts"
 import { useMeasure } from "./utils/use-measure.ts"
 
 /**
  * Creates and manages a `solid-three` scene. It initializes necessary objects like
  * camera, renderer, raycaster, and scene, manages the scene graph, setups up an event system
  * and rendering loop based on the provided properties.
- *
- * @param canvas - The HTML canvas element on which Three.js will render.
- * @param props - Configuration properties.
- * @returns - an `Context` with additional properties including addFrameListener.
  */
 export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   const canvasProps = defaultProps(props, { frameloop: "always" })
@@ -105,7 +108,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
       context.clock.elapsedTime = timestamp
     }
     pendingRenderRequest = undefined
-    context.gl.render(context.scene, context.camera)
+    context.gl.render(context.scene, context.currentCamera)
     frameListeners.forEach(listener => listener(context, context.clock.getDelta(), frame))
   }
   function requestRender() {
@@ -120,118 +123,117 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   /*                                                                                */
   /**********************************************************************************/
 
-  const [pointer, setPointer] = createSignal(new Vector2(), { equals: false })
-  const cameraStack = new AugmentedStack<CameraType>("camera")
-  const sceneStack = new AugmentedStack<Scene>("scene")
-  const raycasterStack = new AugmentedStack<Raycaster>("raycaster")
-  const glStack = new AugmentedStack<WebGLRenderer>("gl")
+  const defaultCamera = createMemo(() =>
+    augment(
+      props.defaultCamera instanceof Camera
+        ? (props.defaultCamera as OrthographicCamera | PerspectiveCamera)
+        : props.orthographic
+        ? new OrthographicCamera()
+        : new PerspectiveCamera(),
+      {
+        get props() {
+          return props.defaultCamera || {}
+        },
+      },
+    ),
+  )
+  const cameraStack = new Stack<CameraKind>("camera")
+
+  const scene = createMemo(() =>
+    augment(props.scene instanceof Scene ? props.scene : new Scene(), {
+      get props() {
+        return props.scene || {}
+      },
+    }),
+  )
+  const raycaster = createMemo(() =>
+    augment<Raycaster | EventRaycaster>(
+      props.raycaster instanceof Raycaster ? props.raycaster : new CursorRaycaster(),
+      {
+        get props() {
+          return props.raycaster || {}
+        },
+      },
+    ),
+  )
+  const gl = createMemo(() => {
+    const gl =
+      props.gl instanceof WebGLRenderer
+        ? // props.gl can be a WebGLRenderer provided by the user
+          props.gl
+        : typeof props.gl === "function"
+        ? // or a callback that returns a Renderer
+          props.gl(canvas)
+        : // if props.gl is not defined we default to a WebGLRenderer
+          new WebGLRenderer({ canvas })
+
+    return augment(gl, {
+      get props() {
+        return props.gl || {}
+      },
+    })
+  })
 
   const measure = useMeasure()
   measure.setElement(canvas)
+
+  const defaultTarget = new Vector3()
+  const viewport = createMemo(() =>
+    getCurrentViewport(defaultCamera(), defaultTarget, measure.bounds()),
+  )
 
   const clock = new Clock()
   clock.start()
 
   const context: Context = {
-    canvas,
-    clock,
     get bounds() {
       return measure.bounds()
     },
+    canvas,
+    clock,
     get dpr() {
       return this.gl.getPixelRatio()
     },
-    get pointer() {
-      return pointer()
-    },
-    setPointer,
+    props,
     render,
     requestRender,
+    get viewport() {
+      return viewport()
+    },
     xr,
     // elements
-    get camera() {
-      return cameraStack.peek()!
+    get currentCamera() {
+      return cameraStack.peek() ?? defaultCamera()
     },
-    setCamera: cameraStack.push.bind(cameraStack),
+    setCurrentCamera(camera: CameraKind) {
+      return cameraStack.push(camera)
+    },
     get scene() {
-      return sceneStack.peek()!
+      return scene()
     },
-    setScene: sceneStack.push.bind(sceneStack),
     get raycaster() {
-      return raycasterStack.peek()!
+      return raycaster()
     },
-    setRaycaster: raycasterStack.push.bind(raycasterStack),
     get gl() {
-      return glStack.peek()!
+      return gl()
     },
-    setGl: glStack.push.bind(glStack),
   }
 
-  initializeContext(context, canvasProps)
-
-  /**********************************************************************************/
-  /*                                                                                */
-  /*                                     Events                                     */
-  /*                                                                                */
-  /**********************************************************************************/
-
-  // Initialize event-system
-  const { addEventListener } = createEvents(context, props)
-
-  /**********************************************************************************/
-  /*                                                                                */
-  /*                                   Scene Graph                                  */
-  /*                                                                                */
-  /**********************************************************************************/
-
-  manageSceneGraph(
-    // @ts-expect-error TODO: fix type-error
-    context.scene,
-    children(() => (
-      <eventContext.Provider value={addEventListener}>
-        <frameContext.Provider value={addFrameListener}>
-          <threeContext.Provider value={context}>
-            <canvasPropsContext.Provider value={canvasProps}>
-              {canvasProps.children}
-            </canvasPropsContext.Provider>
-          </threeContext.Provider>
-        </frameContext.Provider>
-      </eventContext.Provider>
-    )) as any,
+  withMultiContexts(
+    () => useRef(props, context),
+    [
+      [threeContext, context],
+      [frameContext, addFrameListener],
+    ],
   )
 
   /**********************************************************************************/
   /*                                                                                */
-  /*                                   Render Loop                                  */
+  /*                                     Effects                                    */
   /*                                                                                */
   /**********************************************************************************/
 
-  let pendingLoopRequest: number | undefined
-  function loop(value: number) {
-    pendingLoopRequest = requestAnimationFrame(loop)
-    context.render(value)
-  }
-  createRenderEffect(() => {
-    if (canvasProps.frameloop === "always") {
-      pendingLoopRequest = requestAnimationFrame(loop)
-    }
-    onCleanup(() => pendingLoopRequest && cancelAnimationFrame(pendingLoopRequest))
-  })
-
-  // Return context merged with `addFrameListeners``
-  // This is used in `@solid-three/testing`
-  return mergeProps(context, { addFrameListener })
-}
-
-function initializeContext(context: Context, props: CanvasProps) {
   withMultiContexts(() => {
-    const { camera, scene, gl, raycaster } = createDefaultElements(context, props)
-    // Set default elements to context
-    context.setGl(gl)
-    context.setCamera(camera)
-    context.setScene(scene)
-    context.setRaycaster(raycaster)
-
     createRenderEffect(() => {
       if (props.frameloop === "never") {
         context.clock.stop()
@@ -243,11 +245,12 @@ function initializeContext(context: Context, props: CanvasProps) {
 
     // Manage camera
     createRenderEffect(() => {
-      if (!props.camera || props.camera instanceof Camera) return
-      useProps(camera, props.camera)
+      if (cameraStack.peek()) return
+      if (!props.defaultCamera || props.defaultCamera instanceof Camera) return
+      useProps(defaultCamera, props.defaultCamera)
       // NOTE:  Manually update camera's matrix with updateMatrixWorld is needed.
       //        Otherwise casting a ray immediately after start-up will cause the incorrect matrix to be used.
-      camera().updateMatrixWorld(true)
+      defaultCamera().updateMatrixWorld(true)
     })
 
     // Manage scene
@@ -315,67 +318,54 @@ function initializeContext(context: Context, props: CanvasProps) {
         useProps(gl, props.gl)
       }
     })
-  }, [
-    [threeContext, context],
-    [canvasPropsContext, props],
-  ])
-}
+  }, [[threeContext, context]])
 
-/**
- * Creates the default elements of the `solid-three` context.
- *
- * @param canvas - The HTML canvas element to be used for the WebGL renderer.
- * @param props - Configuration properties that define specifics such as camera type,
- *                              scene configuration, raycaster parameters, and renderer options.
- * @returns - Returns objects providing reactive access to the camera, WebGL renderer, raycaster,
- *            and scene, allowing these elements to be integrated into the Solid.js reactive system.
- */
-function createDefaultElements(context: Context, props: CanvasProps) {
-  return {
-    camera: createMemo(() =>
-      augment(
-        props.camera instanceof Camera
-          ? (props.camera as OrthographicCamera | PerspectiveCamera)
-          : props.orthographic
-          ? new OrthographicCamera()
-          : new PerspectiveCamera(),
-        {
-          get props() {
-            return props.camera || {}
-          },
-        },
-      ),
-    ),
-    scene: createMemo(() =>
-      augment(props.scene instanceof Scene ? props.scene : new Scene(), {
-        get props() {
-          return props.scene || {}
-        },
-      }),
-    ),
-    raycaster: createMemo(() =>
-      augment(props.raycaster instanceof Raycaster ? props.raycaster : new Raycaster(), {
-        get props() {
-          return props.raycaster || {}
-        },
-      }),
-    ),
-    gl: createMemo(() => {
-      const gl =
-        props.gl instanceof WebGLRenderer
-          ? // props.gl can be a WebGLRenderer provided by the user
-            props.gl
-          : typeof props.gl === "function"
-          ? // or a callback that returns a Renderer
-            props.gl(context.canvas)
-          : // if props.gl is not defined we default to a WebGLRenderer
-            new WebGLRenderer({ canvas: context.canvas })
+  /**********************************************************************************/
+  /*                                                                                */
+  /*                                   Render Loop                                  */
+  /*                                                                                */
+  /**********************************************************************************/
 
-      return augment(gl, {
-        get props() {
-          return props.gl || {}
-        },
-      })
-    }),
+  let pendingLoopRequest: number | undefined
+  function loop(value: number) {
+    pendingLoopRequest = requestAnimationFrame(loop)
+    context.render(value)
   }
+  createRenderEffect(() => {
+    if (canvasProps.frameloop === "always") {
+      pendingLoopRequest = requestAnimationFrame(loop)
+    }
+    onCleanup(() => pendingLoopRequest && cancelAnimationFrame(pendingLoopRequest))
+  })
+
+  /**********************************************************************************/
+  /*                                                                                */
+  /*                                     Events                                     */
+  /*                                                                                */
+  /**********************************************************************************/
+
+  // Initialize event-system
+  const { addEventListener } = createEvents(context)
+
+  /**********************************************************************************/
+  /*                                                                                */
+  /*                                   Scene Graph                                  */
+  /*                                                                                */
+  /**********************************************************************************/
+
+  manageSceneGraph(
+    // @ts-expect-error TODO: fix type-error
+    context.scene,
+    children(() => (
+      <eventContext.Provider value={addEventListener}>
+        <frameContext.Provider value={addFrameListener}>
+          <threeContext.Provider value={context}>{canvasProps.children}</threeContext.Provider>
+        </frameContext.Provider>
+      </eventContext.Provider>
+    )) as any,
+  )
+
+  // Return context merged with `addFrameListeners``
+  // This is used in `@solid-three/testing`
+  return mergeProps(context, { addFrameListener })
 }

@@ -1,9 +1,29 @@
 import type { Accessor, Context, JSX } from "solid-js"
-import { type MergeProps, mergeProps, onCleanup } from "solid-js"
-import type { Augment, Constructor } from "src/types.ts"
-import { Material, Object3D, type Renderer, Texture } from "three"
+import { createRenderEffect, type MergeProps, mergeProps, onCleanup, type Ref } from "solid-js"
+import type { Augment, CameraKind, Constructor, Loader } from "src/types.ts"
+import {
+  Camera,
+  Material,
+  Object3D,
+  OrthographicCamera,
+  type Renderer,
+  Texture,
+  Vector3,
+} from "three"
 import { $S3C } from "./constants.ts"
 import type { Instance } from "./types"
+import type { Measure } from "./utils/use-measure.ts"
+
+/**********************************************************************************/
+/*                                                                                */
+/*                                      Guards                                    */
+/*                                                                                */
+/**********************************************************************************/
+
+export const isOrthographicCamera = (def: Camera): def is OrthographicCamera =>
+  "isOrthographicCamera" in def && !!def.isOrthographicCamera
+
+export const isVector3 = (def: object): def is Vector3 => "isVector3" in def && !!def.isVector3
 
 /**********************************************************************************/
 /*                                                                                */
@@ -11,9 +31,40 @@ import type { Instance } from "./types"
 /*                                                                                */
 /**********************************************************************************/
 
-export function autodispose<T extends { dispose(): void }>(object: T): T {
-  onCleanup(object.dispose.bind(object))
+export function autodispose<T extends { dispose?: () => void }>(object: T): T {
+  if (object.dispose) {
+    onCleanup(object.dispose.bind(object))
+  }
   return object
+}
+
+/**********************************************************************************/
+/*                                                                                */
+/*                                  Auto Listen                                   */
+/*                                                                                */
+/**********************************************************************************/
+
+type WithUndefinedListener<T> = T extends (
+  type: infer Type,
+  listener: infer L,
+  ...args: infer A
+) => infer R
+  ? (type: Type, listener: L | undefined, ...args: A) => R
+  : never
+
+export function autolisten<
+  TTarget extends {
+    addEventListener(...args: any[]): void
+    removeEventListener(...args: any[]): void
+  },
+>(
+  object: TTarget,
+): TTarget["addEventListener"] & WithUndefinedListener<TTarget["addEventListener"]> {
+  return ((type: any, callback: any, ...options: any[]) => {
+    if (callback === undefined || callback === null) return
+    object.addEventListener(type, callback, ...options)
+    onCleanup(() => object.removeEventListener(type, callback, ...options))
+  }) as any
 }
 
 /**********************************************************************************/
@@ -30,7 +81,7 @@ export function autodispose<T extends { dispose(): void }>(object: T): T {
  * @param augmentation - additional data: `{ props }`
  * @returns the `three` instance with the additional data
  */
-export const augment = <T>(instance: T, augmentation = {}) => {
+export const augment = <T>(instance: T, augmentation = { props: {} }) => {
   if (instance && typeof instance === "object" && $S3C in instance) {
     return instance as Instance<T>
   }
@@ -102,6 +153,8 @@ export const hasColorSpace = <
 /**********************************************************************************/
 
 export function isConstructor<T>(value: T | Constructor): value is Constructor {
+  // @ts-expect-error
+  console.log(value, value.prototype)
   return typeof value === "function" && value.prototype !== undefined
 }
 
@@ -228,4 +281,80 @@ export function withMultiContexts<TResult, T extends readonly [unknown?, ...unkn
   }, children)()
 
   return result!
+}
+
+/**********************************************************************************/
+/*                                                                                */
+/*                                       Load                                     */
+/*                                                                                */
+/**********************************************************************************/
+
+export function load<TSource, TResult extends object>(
+  loader: Loader<TSource, TResult>,
+  path: TSource,
+) {
+  return new Promise<TResult>((resolve, reject) => loader.load(path, resolve, undefined, reject))
+}
+
+/**********************************************************************************/
+/*                                                                                */
+/*                                     Use Ref                                    */
+/*                                                                                */
+/**********************************************************************************/
+
+export function useRef<T>(props: { ref?: Ref<T> }, value: T | Accessor<T>) {
+  createRenderEffect(() => {
+    const result =
+      typeof value === "function"
+        ? // @ts-expect-error
+          value()
+        : value
+    if (typeof props.ref === "function") {
+      // @ts-expect-error
+      props.ref(result)
+    } else {
+      props.ref = result
+    }
+  })
+}
+
+/**********************************************************************************/
+/*                                                                                */
+/*                              Get Current Viewport                              */
+/*                                                                                */
+/**********************************************************************************/
+
+const tempTarget = new Vector3()
+const position = new Vector3()
+export function getCurrentViewport(
+  _camera: CameraKind,
+  target: Vector3 | Parameters<Vector3["set"]>,
+  { width, height, top, left }: Measure,
+) {
+  const aspect = width / height
+
+  if (isVector3(target)) {
+    tempTarget.copy(target)
+  } else {
+    tempTarget.set(...target)
+  }
+
+  const distance = _camera.getWorldPosition(position).distanceTo(tempTarget)
+
+  if (isOrthographicCamera(_camera)) {
+    return {
+      width: width / _camera.zoom,
+      height: height / _camera.zoom,
+      top,
+      left,
+      factor: 1,
+      distance,
+      aspect,
+    }
+  }
+
+  const fov = (_camera.fov * Math.PI) / 180 // convert vertical fov to radians
+  const h = 2 * Math.tan(fov / 2) * distance // visible height
+  const w = h * (width / height)
+  return { width: w, height: h, top, left, factor: width / w, distance, aspect }
 }

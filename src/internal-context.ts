@@ -1,6 +1,5 @@
 import { type JSX, createContext, useContext } from "solid-js"
 import { Object3D } from "three"
-import type { CanvasProps } from "./canvas.tsx"
 import type { EventName, Instance } from "./types.ts"
 
 /**
@@ -36,19 +35,3 @@ export const addPortal = (children: JSX.Element | JSX.Element[]) => {
   addPortal(children)
 }
 export const portalContext = createContext<(children: JSX.Element | JSX.Element[]) => void>()
-
-/**
- * Hook that provides access to the props of the nearest Canvas component up the component tree.
- * This hook must be used within components that are descendants of the Canvas component.
- *
- * @returns The current properties of the Canvas component.
- * @throws Throws an error if used outside of a Canvas component context.
- */
-export const useCanvasProps = () => {
-  const canvasProps = useContext(canvasPropsContext)
-  if (!canvasProps) {
-    throw new Error("S3: Hooks can only be used within the Canvas component!")
-  }
-  return canvasProps
-}
-export const canvasPropsContext = createContext<CanvasProps>()

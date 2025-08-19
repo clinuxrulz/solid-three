@@ -1,37 +1,70 @@
-import type { Accessor, JSX, Setter, Component as SolidComponent } from "solid-js"
-import type * as THREE from "three"
+import type { JSX, Component as SolidComponent } from "solid-js"
+import type {
+  Clock,
+  ColorRepresentation,
+  OrthographicCamera,
+  PerspectiveCamera,
+  Raycaster,
+  Scene,
+  Color as ThreeColor,
+  Euler as ThreeEuler,
+  Layers as ThreeLayers,
+  Matrix3 as ThreeMatrix3,
+  Matrix4 as ThreeMatrix4,
+  Object3D as ThreeObject3D,
+  Quaternion as ThreeQuaternion,
+  Vector2 as ThreeVector2,
+  Vector3 as ThreeVector3,
+  Vector4 as ThreeVector4,
+  WebGLRenderer,
+} from "three"
+import type { CanvasProps } from "./canvas.tsx"
 import type { $S3C } from "./constants.ts"
+import type { EventRaycaster } from "./raycasters.tsx"
 import type { Measure } from "./utils/use-measure.ts"
 
-interface ContextElements {
-  camera: Instance<CameraType>
-  setCamera: (camera: CameraType | Accessor<CameraType>) => () => void
-  gl: Instance<THREE.WebGLRenderer>
-  setGl: (gl: THREE.WebGLRenderer | Accessor<THREE.WebGLRenderer>) => () => void
-  raycaster: Instance<THREE.Raycaster>
-  setRaycaster: (raycaster: THREE.Raycaster | Accessor<THREE.Raycaster>) => () => void
-  scene: Instance<THREE.Scene>
-  setScene: (scene: THREE.Scene | Accessor<THREE.Scene>) => () => void
-}
-
-/** `solid-three` context. Accessible via `useThree`. */
-export interface Context extends ContextElements {
-  clock: THREE.Clock
+export interface Context {
+  bounds: Measure
   canvas: HTMLCanvasElement
+  clock: Clock
+  currentCamera: CameraKind
+  dpr: number
+  gl: Instance<WebGLRenderer>
+  props: CanvasProps
+  raycaster: Instance<Raycaster | EventRaycaster>
   render: (delta: number) => void
   requestRender: () => void
-  pointer: THREE.Vector2
-  setPointer: Setter<THREE.Vector2>
+  setCurrentCamera(camera: CameraKind): () => void
+  scene: Instance<Scene>
+  viewport: Viewport
   xr: {
     connect: () => void
     disconnect: () => void
   }
-  bounds: Measure
-  dpr: number
+}
+
+export interface Viewport {
+  width: number
+  height: number
+  top: number
+  left: number
+  factor: number
+  distance: number
+  aspect: number
 }
 
 /** Possible camera types. */
-export type CameraType = THREE.PerspectiveCamera | THREE.OrthographicCamera
+export type CameraKind = PerspectiveCamera | OrthographicCamera
+
+export type Loader<TSource, TResult extends object> = {
+  setPath?(path: string): void
+  load: (
+    url: TSource,
+    onLoad: (result: TResult) => void,
+    onProgress: (() => void) | undefined,
+    onReject: ((error: ErrorEvent | unknown) => void) | undefined,
+  ) => unknown
+}
 
 /**********************************************************************************/
 /*                                                                                */
@@ -88,23 +121,23 @@ interface ThreeVectorRepresentation extends ThreeMathRepresentation {
 }
 
 /** Map given type to `solid-three` representation. */
-type Representation<T> = T extends THREE.Color
-  ? ConstructorParameters<typeof THREE.Color> | THREE.ColorRepresentation
-  : T extends ThreeVectorRepresentation | THREE.Layers | THREE.Euler
+export type Representation<T> = T extends ThreeColor
+  ? ConstructorParameters<typeof ThreeColor> | ColorRepresentation
+  : T extends ThreeVectorRepresentation | ThreeLayers | ThreeEuler
   ? T | Parameters<T["set"]> | number
   : T extends ThreeMathRepresentation
   ? T | Parameters<T["set"]>
   : T
 
-export type Vector2 = Representation<THREE.Vector2>
-export type Vector3 = Representation<THREE.Vector3>
-export type Vector4 = Representation<THREE.Vector4>
-export type Color = Representation<THREE.Color>
-export type Layers = Representation<THREE.Layers>
-export type Quaternion = Representation<THREE.Quaternion>
-export type Euler = Representation<THREE.Euler>
-export type Matrix3 = Representation<THREE.Matrix3>
-export type Matrix4 = Representation<THREE.Matrix4>
+export type Vector2 = Representation<ThreeVector2>
+export type Vector3 = Representation<ThreeVector3>
+export type Vector4 = Representation<ThreeVector4>
+export type Color = Representation<ThreeColor>
+export type Layers = Representation<ThreeLayers>
+export type Quaternion = Representation<ThreeQuaternion>
+export type Euler = Representation<ThreeEuler>
+export type Matrix3 = Representation<ThreeMatrix3>
+export type Matrix4 = Representation<ThreeMatrix4>
 
 /**********************************************************************************/
 /*                                                                                */
@@ -112,16 +145,8 @@ export type Matrix4 = Representation<THREE.Matrix4>
 /*                                                                                */
 /**********************************************************************************/
 
-type ExtractConstructors<T> = T extends Constructor ? T : never
-/** All constructors within the `THREE` namespace */
-type ThreeConstructors = ExtractConstructors<(typeof THREE)[keyof typeof THREE]>
-/** Generic instance of a given `Constructor`. */
-export type ThreeInstance = InstanceFromConstructor<ThreeConstructors>
-
 /** Instance of a given constructor augmented with `S3Metadata`. Defaults to `ThreeConstructor`*/
-export type Instance<T extends object | unknown = ThreeConstructors> = Augment<
-  InstanceFromConstructor<T>
->
+export type Instance<T extends object | unknown = Constructor> = Augment<InstanceFromConstructor<T>>
 
 export type Augment<T> = T & {
   [$S3C]: Metadata<T>
@@ -129,7 +154,7 @@ export type Augment<T> = T & {
 
 /** Metadata of a `solid-three` instance. */
 export type Metadata<T extends object | unknown> = {
-  props?: Props<InstanceFromConstructor<T>>
+  props: Props<InstanceFromConstructor<T>>
   children: Set<Instance>
 }
 
@@ -147,12 +172,7 @@ export type Props<T extends object | unknown> = Partial<
     MapToRepresentation<InstanceFromConstructor<T>>,
     {
       args: T extends Constructor ? ConstructorOverloadParameters<T> : undefined
-      attach:
-        | string
-        | ((
-            parent: Instance<THREE.Object3D>,
-            self: Instance<InstanceFromConstructor<T>>,
-          ) => () => void)
+      attach: string | ((parent: Instance<typeof ThreeObject3D>, self: Instance<T>) => () => void)
       children?: JSX.Element
       onUpdate: (self: Instance<InstanceFromConstructor<T>>) => void
       /**

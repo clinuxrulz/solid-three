@@ -4,6 +4,7 @@ import * as THREE from "three"
 import { describe, expect, it } from "vitest"
 import { createT } from "../../src/index.ts"
 import { TestCanvas } from "../../src/testing/index.tsx"
+import type { Context } from "../../src/types.ts"
 
 const T = createT(THREE)
 
@@ -19,7 +20,7 @@ describe("web Canvas", () => {
   })
 
   it("should forward ref", async () => {
-    let ref: HTMLDivElement
+    let ref: Context
 
     render(() => (
       <TestCanvas ref={ref}>

@@ -21,8 +21,8 @@ import {
 import { $S3C } from "./constants.ts"
 import { isEventType } from "./create-events.ts"
 import { useThree } from "./hooks.ts"
-import { addToEventListeners, useCanvasProps } from "./internal-context.ts"
-import type { Instance } from "./types.ts"
+import { addToEventListeners } from "./internal-context.ts"
+import type { Context, Instance } from "./types.ts"
 import { hasColorSpace, isInstance, resolve } from "./utils.ts"
 import { check } from "./utils/conditionals.ts"
 
@@ -32,17 +32,21 @@ import { check } from "./utils/conditionals.ts"
 /*                                                                                */
 /**********************************************************************************/
 
-export function applyProps<T>(object: T, props: any) {
+function applyProps<T extends Record<string, any>>(
+  context: Pick<Context, "requestRender" | "gl" | "props">,
+  object: T,
+  props: any,
+) {
   const keys = Object.keys(props)
   for (const key of keys) {
     // An array of sub-property-keys:
     // p.ex in <T.Mesh position={} position-x={}/> position's subKeys will be ['position-x']
     const subKeys = keys.filter(_key => key !== _key && _key.includes(key))
     createRenderEffect(() => {
-      applyProp(object, key, props[key])
+      applyProp(context, object, key, props[key])
       // If property updates, apply its sub-properties immediately after.
       for (const subKey of subKeys) {
-        applyProp(object, subKey, props[subKey])
+        applyProp(context, object, subKey, props[subKey])
       }
     })
   }
@@ -76,7 +80,12 @@ const NEEDS_UPDATE = [
  * @param type - The property name, which can include nested paths indicated by hyphens.
  * @param value - The value to be assigned to the property; can be of any appropriate type.
  */
-export function applyProp<T>(source: T, type: string, value: any) {
+export function applyProp<T extends Record<string, any>>(
+  context: Pick<Context, "requestRender" | "gl" | "props">,
+  source: T,
+  type: string,
+  value: any,
+) {
   if (!source) {
     console.error("error while applying prop", source, type, value)
     return
@@ -88,12 +97,11 @@ export function applyProp<T>(source: T, type: string, value: any) {
   /* If the key contains a hyphen, we're setting a sub property. */
   if (type.indexOf("-") > -1) {
     const [property, ...rest] = type.split("-")
-    // @ts-expect-error TODO: fix type-error
-    applyProp(source[property], rest.join("-"), value)
+
+    applyProp(context, source[property], rest.join("-"), value)
     return
   }
 
-  // @ts-expect-error TODO: fix type-error
   if (NEEDS_UPDATE.includes(type) && ((!source[type] && value) || (source[type] && !value))) {
     // @ts-expect-error
     source.needsUpdate = true
@@ -117,8 +125,7 @@ export function applyProp<T>(source: T, type: string, value: any) {
 
   if (isEventType(type)) {
     if (source instanceof Object3D && isInstance(source)) {
-      // @ts-expect-error TODO: fix type-error
-      const cleanup = addToEventListeners(source, type)
+      const cleanup = addToEventListeners(source as Instance<Object3D>, type)
       onCleanup(cleanup)
     } else {
       console.error(
@@ -131,10 +138,7 @@ export function applyProp<T>(source: T, type: string, value: any) {
     return
   }
 
-  // @ts-expect-error TODO: fix type-error
   const target = source[type]
-  const context = useThree()
-  const canvasProps = useCanvasProps()
 
   try {
     // Copy if properties match signatures
@@ -154,45 +158,46 @@ export function applyProp<T>(source: T, type: string, value: any) {
     // https://github.com/pmndrs/react-three-fiber/issues/274
     else if (target?.set && typeof value !== "object") {
       const isColor = target instanceof Color
+
       // Allow setting array scalars
-      if (!isColor && target.setScalar && typeof value === "number") target.setScalar(value)
+      if (!isColor && target.setScalar && typeof value === "number") {
+        target.setScalar(value)
+      }
       // Otherwise just set ...
-      else if (value !== undefined) target.set(value)
+      else if (value !== undefined) {
+        target.set(value)
+      }
     }
     // Else, just overwrite the value
     else {
       // @ts-expect-error TODO: fix type-error
       source[type] = value
-
       // Auto-convert sRGB textures, for now ...
       // https://github.com/pmndrs/react-three-fiber/issues/344
       if (
-        // @ts-expect-error TODO: fix type-error
         source[type] instanceof Texture &&
         // sRGB textures must be RGBA8 since r137 https://github.com/mrdoob/three.js/pull/23129
-        // @ts-expect-error TODO: fix type-error
         source[type].format === RGBAFormat &&
-        // @ts-expect-error TODO: fix type-error
         source[type].type === UnsignedByteType
       ) {
         createRenderEffect(() => {
           // Subscribe manually to linear and flat-prop.
-          canvasProps.linear
-          canvasProps.flat
+          context.props.linear
+          context.props.flat
 
-          // @ts-expect-error TODO: fix type-error
           const texture = source[type] as Texture
+
           if (hasColorSpace(texture) && hasColorSpace(context.gl)) {
             texture.colorSpace = context.gl.outputColorSpace
           } else {
-            // @ts-expect-error
+            // @ts-expect-error TODO: fix type-error
             texture.encoding = context.gl.outputEncoding
           }
         })
       }
     }
   } finally {
-    if (canvasProps.frameloop === "demand") {
+    if (context.props.frameloop === "demand") {
       context.requestRender()
     }
   }
@@ -225,8 +230,10 @@ export const manageSceneGraph = <T extends Instance<Object3D>>(
         const result = resolve(childAccessor, true)
         return Array.isArray(result) ? result : result ? [result] : []
       },
-      child =>
+      _child =>
         createRenderEffect(() => {
+          const child = resolve(_child)
+
           // NOTE:  this happens currently more then I would expect.
           if (!child) {
             return
@@ -237,7 +244,7 @@ export const manageSceneGraph = <T extends Instance<Object3D>>(
           onCleanup(() => parent[$S3C].children.delete(child))
 
           // Attaching children first. If a child is attached it will not be added to the parent's children.
-          let attachProp = child[$S3C].props?.attach
+          let attachProp = child[$S3C]?.props?.attach
 
           // Attach-prop can be a callback. It returns a cleanup-function.
           if (typeof attachProp === "function") {
@@ -273,7 +280,7 @@ export const manageSceneGraph = <T extends Instance<Object3D>>(
             return
           }
 
-          // If no attach-prop is defined, connect the child to the parent.
+          // If no attach-prop is defined, add the child to the parent.
           if (
             child instanceof Object3D &&
             parent instanceof Object3D &&
@@ -310,13 +317,17 @@ export const manageSceneGraph = <T extends Instance<Object3D>>(
  * @param props - An object containing the props to apply. This includes both direct properties
  *                and special properties like `ref` and `children`.
  */
-export function useProps<T extends object>(object: Accessor<T>, props: any) {
+export function useProps<T extends object>(
+  object: T | Accessor<T>,
+  props: any,
+  context: Pick<Context, "requestRender" | "gl" | "props"> = useThree(),
+) {
   const [local, instanceProps] = splitProps(props, ["ref", "args", "object", "attach", "children"])
 
   // Assign ref
   createRenderEffect(() => {
-    if (local.ref instanceof Function) local.ref(object())
-    else local.ref = object()
+    if (local.ref instanceof Function) local.ref(resolve(object))
+    else local.ref = resolve(object)
   })
 
   createRenderEffect(() => {
@@ -330,17 +341,20 @@ export function useProps<T extends object>(object: Accessor<T>, props: any) {
 
   // Apply the props to THREE-instance
   createRenderEffect(() => {
-    applyProps(object(), instanceProps)
+    applyProps(context, resolve(object), instanceProps)
     // NOTE: see "onUpdate should not update itself"-test
-    untrack(() => props.onUpdate)?.(object())
+    untrack(() => props.onUpdate)?.(resolve(object))
   })
 
   // Automatically dispose
   onCleanup(() =>
-    check(object, object => {
-      if ("dispose" in object && typeof object.dispose === "function") {
-        object.dispose()
-      }
-    }),
+    check(
+      () => resolve(object),
+      object => {
+        if ("dispose" in object && typeof object.dispose === "function") {
+          object.dispose()
+        }
+      },
+    ),
   )
 }

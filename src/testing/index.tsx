@@ -1,4 +1,5 @@
-import { type Accessor, type JSX, createRenderEffect, createRoot, mergeProps } from "solid-js"
+import { type Accessor, type JSX, createRoot, mergeProps } from "solid-js"
+import { useRef } from "src/utils.ts"
 import type { CanvasProps } from "../canvas.tsx"
 import { createThree } from "../create-three.tsx"
 import { WebGL2RenderingContext } from "./webgl2-rendering-context.ts"
@@ -71,12 +72,8 @@ export function TestCanvas(props: CanvasProps) {
     <div style={{ width: "100%", height: "100%" }}>{canvas}</div>
   ) as HTMLDivElement
 
-  createRoot(() => createThree(canvas, props))
-  /* Assign ref */
-  createRenderEffect(() => {
-    if (props.ref instanceof Function) props.ref(container)
-    else props.ref = container
-  })
+  const three = createRoot(() => createThree(canvas, props))
+  useRef(props, three)
 
   return container
 }

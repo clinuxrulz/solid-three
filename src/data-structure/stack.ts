@@ -4,8 +4,10 @@ import { type Accessor, type Setter, createSignal, getOwner, onCleanup, untrack 
 export class Stack<T = any> {
   #array: Accessor<(T | Accessor<T>)[]>
   #setArray: Setter<(T | Accessor<T>)[]>
-  constructor(public name: string) {
-    ;[this.#array, this.#setArray] = createSignal<(T | Accessor<T>)[]>([], { equals: false })
+  constructor(public name: string = "") {
+    ;[this.#array, this.#setArray] = createSignal<(T | Accessor<T>)[]>([], {
+      equals: false,
+    })
   }
   /**
    * Returns the complete stack.
