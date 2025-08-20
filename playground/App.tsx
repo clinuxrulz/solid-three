@@ -1,7 +1,7 @@
 import { A, Route, Router } from "@solidjs/router"
 import type { ParentProps } from "solid-js"
 import * as THREE from "three"
-import { Canvas, createT } from "../src/index.ts"
+import { Canvas, createT, Entity } from "../src/index.ts"
 import { EnvironmentExample } from "./examples/EnvironmentExample.tsx"
 import { PortalExample } from "./examples/PortalExample.tsx"
 import { SolarExample } from "./examples/SolarExample.tsx"
@@ -83,13 +83,16 @@ export function App() {
         path="/"
         component={() => (
           <Canvas
+            defaultCamera={{ position: new THREE.Vector3(0, 0, 15) }}
+            scene={{ background: [1, 0, 0] }}
             style={{ width: "100vw", height: "100vh" }}
-            camera={{ position: new THREE.Vector3(0, 0, 15) }}
           >
-            <T.Mesh>
-              <T.BoxGeometry />
-              <T.MeshBasicMaterial color="gray" />
-            </T.Mesh>
+            <Entity from={THREE.Group}>
+              <T.Mesh>
+                <T.BoxGeometry />
+                <T.MeshBasicMaterial color="gray" />
+              </T.Mesh>
+            </Entity>
           </Canvas>
         )}
       />

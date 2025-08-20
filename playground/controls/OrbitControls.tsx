@@ -8,7 +8,7 @@ import { processProps } from "./process-props.ts"
 
 export interface OrbitControlsProps extends S3.Props<typeof ThreeOrbitControls> {
   ref?: Ref<ThreeOrbitControls>
-  camera?: S3.CameraType
+  camera?: S3.CameraKind
   domElement?: HTMLElement
   enableDamping?: boolean
   onChange?: (e?: Event<"change", ThreeOrbitControls>) => void
@@ -41,7 +41,7 @@ export function OrbitControls(props: OrbitControlsProps) {
   const three = useThree()
   const controls = createMemo<ThreeOrbitControls>(previous => {
     previous?.dispose()
-    return new ThreeOrbitControls(config.camera ?? three.camera)
+    return new ThreeOrbitControls(config.camera ?? three.currentCamera)
   })
 
   useFrame(() => controls().update())
