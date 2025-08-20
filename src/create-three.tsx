@@ -3,6 +3,7 @@ import {
   createEffect,
   createMemo,
   createRenderEffect,
+  createRoot,
   mergeProps,
   onCleanup,
 } from "solid-js"
@@ -29,9 +30,10 @@ import { frameContext, threeContext } from "./hooks.ts"
 import { eventContext } from "./internal-context.ts"
 import { manageSceneGraph, useProps } from "./props.ts"
 import { CursorRaycaster, type EventRaycaster } from "./raycasters.tsx"
-import type { CameraKind, Context } from "./types.ts"
+import type { CameraKind, Context, FrameListener, FrameListenerCallback } from "./types.ts"
 import {
   augment,
+  binarySearch,
   defaultProps,
   getCurrentViewport,
   removeElementFromArray,
@@ -54,15 +56,55 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   /*                                                                                */
   /**********************************************************************************/
 
-  type FrameListener = (context: Context, delta: number, frame?: XRFrame) => void
+  const frameListeners = {
+    before: {
+      map: new Map<number, FrameListenerCallback[]>(),
+      priorities: [] as number[], // Keep this sorted
+    },
+    after: {
+      map: new Map<number, FrameListenerCallback[]>(),
+      priorities: [] as number[],
+    },
+  }
 
-  const frameListeners: FrameListener[] = []
-  // Adds a callback to be called on each frame
-  function addFrameListener(callback: FrameListener) {
-    frameListeners.push(callback)
-    const cleanup = () => removeElementFromArray(frameListeners, callback)
-    onCleanup(cleanup)
-    return cleanup
+  const addFrameListener: FrameListener = (callback, options) => {
+    return createRoot(dispose => {
+      createRenderEffect(() => {
+        const { stage = "before", priority = 0 } = options ?? {}
+
+        const listeners = frameListeners[stage]
+
+        let array = listeners.map.get(priority)
+
+        if (!array) {
+          array = []
+          listeners.map.set(priority, array)
+          const index = binarySearch(listeners.priorities, priority)
+          listeners.priorities.splice(index, 0, priority)
+        }
+
+        array.push(callback)
+
+        onCleanup(() => {
+          removeElementFromArray(array, callback)
+          if (array.length === 0) {
+            listeners.map.delete(priority)
+            listeners.priorities.splice(listeners.priorities.indexOf(priority), 1)
+          }
+        })
+      })
+
+      return dispose
+    })
+  }
+
+  function updateFrameListeners(stage: "before" | "after", delta: number, frame?: XRFrame) {
+    for (const priority of frameListeners[stage].priorities) {
+      const callbacks = frameListeners[stage].map.get(priority)!
+      for (const callback of callbacks) {
+        callback(context, delta, frame)
+      }
+    }
   }
 
   /**********************************************************************************/
@@ -100,6 +142,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   /**********************************************************************************/
 
   let pendingRenderRequest: number | undefined
+
   function render(timestamp: number, frame?: XRFrame) {
     if (!context.gl) {
       return
@@ -108,8 +151,11 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
       context.clock.elapsedTime = timestamp
     }
     pendingRenderRequest = undefined
+
+    const delta = context.clock.getDelta()
+    updateFrameListeners("before", delta, frame)
     context.gl.render(context.scene, context.currentCamera)
-    frameListeners.forEach(listener => listener(context, context.clock.getDelta(), frame))
+    updateFrameListeners("after", delta, frame)
   }
   function requestRender() {
     if (pendingRenderRequest) return

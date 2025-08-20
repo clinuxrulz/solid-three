@@ -1,6 +1,6 @@
 import type { Accessor, Context, JSX } from "solid-js"
 import { createRenderEffect, type MergeProps, mergeProps, onCleanup, type Ref } from "solid-js"
-import type { Augment, CameraKind, Constructor, Loader } from "src/types.ts"
+import type { CameraKind, Constructor, Loader, Meta } from "src/types.ts"
 import {
   Camera,
   Material,
@@ -11,7 +11,6 @@ import {
   Vector3,
 } from "three"
 import { $S3C } from "./constants.ts"
-import type { Instance } from "./types"
 import type { Measure } from "./utils/use-measure.ts"
 
 /**********************************************************************************/
@@ -83,11 +82,11 @@ export function autolisten<
  */
 export const augment = <T>(instance: T, augmentation = { props: {} }) => {
   if (instance && typeof instance === "object" && $S3C in instance) {
-    return instance as Instance<T>
+    return instance as Meta<T>
   }
   // @ts-expect-error TODO: fix type-error
   instance[$S3C] = { children: new Set(), ...augmentation }
-  return instance as Instance<T>
+  return instance as Meta<T>
 }
 
 /**********************************************************************************/
@@ -153,13 +152,11 @@ export const hasColorSpace = <
 /**********************************************************************************/
 
 export function isConstructor<T>(value: T | Constructor): value is Constructor {
-  // @ts-expect-error
-  console.log(value, value.prototype)
   return typeof value === "function" && value.prototype !== undefined
 }
 
-export const isInstance = <T extends object>(element: T): element is Augment<T> =>
-  typeof element === "object" && $S3C in element
+export const isInstance = <T>(element: T): element is Meta<T> =>
+  typeof element === "object" && element && $S3C in element
 
 /**********************************************************************************/
 /*                                                                                */
@@ -357,4 +354,22 @@ export function getCurrentViewport(
   const h = 2 * Math.tan(fov / 2) * distance // visible height
   const w = h * (width / height)
   return { width: w, height: h, top, left, factor: width / w, distance, aspect }
+}
+
+// Find where to insert target to keep array sorted
+export function binarySearch(array: number[], target: number) {
+  let left = 0
+  let right = array.length
+
+  while (left < right) {
+    const mid = Math.floor((left + right) / 2)
+
+    if (array[mid] < target) {
+      left = mid + 1 // Target goes after mid
+    } else {
+      right = mid // Target goes at or before mid
+    }
+  }
+
+  return left // Insertion point
 }

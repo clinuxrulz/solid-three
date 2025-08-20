@@ -13,8 +13,8 @@ import {
 import { Object3D } from "three"
 import { threeContext, useThree } from "./hooks.ts"
 import { manageSceneGraph, useProps } from "./props.ts"
-import type { Constructor, Instance, Loader, Overwrite, Props } from "./types.ts"
-import { type InstanceFromConstructor } from "./types.ts"
+import type { Constructor, Loader, Meta, Overwrite, Props } from "./types.ts"
+import { type InstanceOf } from "./types.ts"
 import { augment, autodispose, isConstructor, isInstance, load, withContext } from "./utils.ts"
 import { whenMemo } from "./utils/conditionals.ts"
 
@@ -25,7 +25,7 @@ import { whenMemo } from "./utils/conditionals.ts"
 /**********************************************************************************/
 
 type PortalProps = ParentProps<{
-  element?: InstanceFromConstructor<Object3D> | Instance<Object3D>
+  element?: InstanceOf<Object3D> | Meta<Object3D>
 }>
 /**
  * A component for placing its children outside the regular `solid-three` scene graph managed by Solid's reactive system.
@@ -40,7 +40,7 @@ export const Portal = (props: PortalProps) => {
   const scene = createMemo(() => {
     return props.element
       ? isInstance(props.element)
-        ? (props.element as Instance<Object3D>)
+        ? (props.element as Meta<Object3D>)
         : augment(props.element, { props: {} })
       : context.scene
   })
@@ -49,7 +49,7 @@ export const Portal = (props: PortalProps) => {
     // @ts-expect-error TODO: fix type-error
     manageSceneGraph(scene(), () =>
       withContext(
-        () => props.children as unknown as Instance | Instance[],
+        () => props.children as unknown as Meta | Meta[],
         // @ts-expect-error TODO: fix type-error
         threeContext,
         mergeProps(context, {
@@ -74,6 +74,7 @@ type EntityProps<T extends object | Constructor<object>> = Overwrite<
   Props<T>,
   {
     from: T | undefined
+    children?: JSXElement
   }
 >
 /**
@@ -95,7 +96,7 @@ export function Entity<T extends object | Constructor<object>>(props: EntityProp
         {
           props,
         },
-      ) as Instance<T>
+      ) as Meta<T>
       return instance
     },
   )

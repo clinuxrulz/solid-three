@@ -6,6 +6,7 @@
     "type": "git",
     "url": "git+https://github.com/solidjs-community/solid-three.git"
   },
+  "type": "module",
   "module": "./dist/index/index.js",
   "main": "./dist/index/index.js",
   "types": "./dist/index/index.d.ts",
@@ -112,6 +113,5 @@
         "./dist/testing/index.d.ts"
       ]
     }
-  },
-  "type": "module"
+  }
 }

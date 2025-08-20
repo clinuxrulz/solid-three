@@ -1,6 +1,6 @@
 import { Object3D, type Intersection } from "three"
 import { $S3C } from "./constants.ts"
-import type { Context, EventName, Instance, ThreeEvent } from "./types.ts"
+import type { Context, EventName, Meta, ThreeEvent } from "./types.ts"
 import { isInstance } from "./utils.ts"
 
 const eventNameMap = {
@@ -97,7 +97,7 @@ function raycast<TNativeEvent extends MouseEvent | WheelEvent>(
   context: Context,
   registry: Object3D[],
   event: TNativeEvent,
-): Intersection<Instance<Object3D>>[] {
+): Intersection<Meta<Object3D>>[] {
   if ("update" in context.raycaster) {
     context.raycaster.update(event, context)
   }
@@ -222,7 +222,7 @@ function createMissableEventRegistry(
 function createHoverEventRegistry(type: "Mouse" | "Pointer", context: Context) {
   const registry = createRegistry<Object3D>()
   let hoveredSet = new Set<Object3D>()
-  let intersections: Intersection<Instance<Object3D>>[] = []
+  let intersections: Intersection<Meta<Object3D>>[] = []
   let hoveredCanvas = false
 
   context.canvas.addEventListener(eventNameMap[`on${type}Move`], nativeEvent => {
@@ -395,7 +395,7 @@ export function createEvents(context: Context) {
      * @param object - The 3D object to register.
      * @param type - The type of event the object should listen for.
      */
-    addEventListener(object: Instance<Object3D>, type: EventName) {
+    addEventListener(object: Meta<Object3D>, type: EventName) {
       switch (type) {
         // Missable Events
         case "onClick":

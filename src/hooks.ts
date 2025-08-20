@@ -1,5 +1,5 @@
 import { type Accessor, createContext, useContext } from "solid-js"
-import type { Context } from "./types"
+import type { Context, FrameListener } from "./types"
 
 /**********************************************************************************/
 /*                                                                                */
@@ -7,8 +7,7 @@ import type { Context } from "./types"
 /*                                                                                */
 /**********************************************************************************/
 
-type FrameContext = (callback: (context: Context, delta: number, frame?: XRFrame) => void) => void
-export const frameContext = createContext<FrameContext>()
+export const frameContext = createContext<FrameListener>()
 
 /**
  * Hook to register a callback that will be executed on each animation frame within the `<Canvas/>` component.
@@ -17,12 +16,12 @@ export const frameContext = createContext<FrameContext>()
  * @param callback - The callback function to be executed on each frame.
  * @throws Throws an error if used outside of the Canvas component context.
  */
-export const useFrame = (callback: (context: Context, delta: number, frame?: XRFrame) => void) => {
+export const useFrame: FrameListener = (callback, options) => {
   const addFrameListener = useContext(frameContext)
   if (!addFrameListener) {
     throw new Error("S3: Hooks can only be used within the Canvas component!")
   }
-  addFrameListener(callback)
+  return addFrameListener(callback, options)
 }
 
 /**********************************************************************************/

@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, Show, type ParentProps, type Ref } from "solid-js"
-import type { Instance } from "src/types.ts"
+import type { Meta } from "src/types.ts"
 import * as THREE from "three"
 import { Canvas, createT, Entity, useFrame } from "../../src/index.ts"
 import { OrbitControls } from "../controls/OrbitControls.tsx"
@@ -66,7 +66,7 @@ function CelestialBody(
   }>,
 ) {
   const [hovered, setHovered] = createSignal(false)
-  let ref: Instance<THREE.Mesh> = null!
+  let ref: Meta<THREE.Mesh> = null!
 
   createEffect(() => {
     if (!props.orbit) return

@@ -22,9 +22,8 @@ import { $S3C } from "./constants.ts"
 import { isEventType } from "./create-events.ts"
 import { useThree } from "./hooks.ts"
 import { addToEventListeners } from "./internal-context.ts"
-import type { Context, Instance } from "./types.ts"
+import type { Context, Meta } from "./types.ts"
 import { hasColorSpace, isInstance, resolve } from "./utils.ts"
-import { check } from "./utils/conditionals.ts"
 
 /**********************************************************************************/
 /*                                                                                */
@@ -125,7 +124,7 @@ export function applyProp<T extends Record<string, any>>(
 
   if (isEventType(type)) {
     if (source instanceof Object3D && isInstance(source)) {
-      const cleanup = addToEventListeners(source as Instance<Object3D>, type)
+      const cleanup = addToEventListeners(source as Meta<Object3D>, type)
       onCleanup(cleanup)
     } else {
       console.error(
@@ -220,9 +219,9 @@ export function applyProp<T extends Record<string, any>>(
  * @param parent - The parent element to which children will be attached.
  * @param childAccessor - A function returning the child or children to be managed.
  */
-export const manageSceneGraph = <T extends Instance<Object3D>>(
+export const manageSceneGraph = <T extends Meta<Object3D>>(
   parent: T,
-  childAccessor: Accessor<Instance | Instance[]>,
+  childAccessor: Accessor<Meta | Meta[]>,
 ) => {
   createRenderEffect(
     mapArray(
@@ -317,44 +316,45 @@ export const manageSceneGraph = <T extends Instance<Object3D>>(
  * @param props - An object containing the props to apply. This includes both direct properties
  *                and special properties like `ref` and `children`.
  */
-export function useProps<T extends object>(
-  object: T | Accessor<T>,
+export function useProps<T extends Record<string, any>>(
+  object: T | undefined | Accessor<T | undefined>,
   props: any,
   context: Pick<Context, "requestRender" | "gl" | "props"> = useThree(),
 ) {
   const [local, instanceProps] = splitProps(props, ["ref", "args", "object", "attach", "children"])
 
-  // Assign ref
   createRenderEffect(() => {
-    if (local.ref instanceof Function) local.ref(resolve(object))
-    else local.ref = resolve(object)
-  })
+    const _object = resolve(object)
 
-  createRenderEffect(() => {
-    if ("children" in props) {
-      // Connect or attach children to THREE-instance
-      const childrenAccessor = children(() => props.children)
-      // @ts-expect-error TODO: fix type-error
-      manageSceneGraph(object(), childrenAccessor as unknown as Accessor<Instance>)
-    }
-  })
+    if (!_object) return
 
-  // Apply the props to THREE-instance
-  createRenderEffect(() => {
-    applyProps(context, resolve(object), instanceProps)
-    // NOTE: see "onUpdate should not update itself"-test
-    untrack(() => props.onUpdate)?.(resolve(object))
-  })
+    // Assign ref
+    createRenderEffect(() => {
+      if (local.ref instanceof Function) local.ref(_object)
+      else local.ref = _object
+    })
 
-  // Automatically dispose
-  onCleanup(() =>
-    check(
-      () => resolve(object),
-      object => {
-        if ("dispose" in object && typeof object.dispose === "function") {
-          object.dispose()
-        }
-      },
-    ),
-  )
+    createRenderEffect(() => {
+      if ("children" in props) {
+        // Connect or attach children to THREE-instance
+        const childrenAccessor = children(() => props.children)
+        // @ts-expect-error TODO: fix type-error
+        manageSceneGraph(_object, childrenAccessor as unknown as Accessor<Meta>)
+      }
+    })
+
+    // Apply the props to THREE-instance
+    createRenderEffect(() => {
+      applyProps(context, _object, instanceProps)
+      // NOTE: see "onUpdate should not update itself"-test
+      untrack(() => props.onUpdate)?.(_object)
+    })
+
+    // Automatically dispose
+    onCleanup(() => () => {
+      if ("dispose" in _object && typeof _object.dispose === "function") {
+        _object.dispose()
+      }
+    })
+  })
 }

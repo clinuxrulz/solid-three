@@ -1,7 +1,8 @@
-import type { JSX, Component as SolidComponent } from "solid-js"
+import type { JSX, Ref, Component as SolidComponent } from "solid-js"
 import type {
   Clock,
   ColorRepresentation,
+  Object3D,
   OrthographicCamera,
   PerspectiveCamera,
   Raycaster,
@@ -11,7 +12,6 @@ import type {
   Layers as ThreeLayers,
   Matrix3 as ThreeMatrix3,
   Matrix4 as ThreeMatrix4,
-  Object3D as ThreeObject3D,
   Quaternion as ThreeQuaternion,
   Vector2 as ThreeVector2,
   Vector3 as ThreeVector3,
@@ -29,13 +29,13 @@ export interface Context {
   clock: Clock
   currentCamera: CameraKind
   dpr: number
-  gl: Instance<WebGLRenderer>
+  gl: Meta<WebGLRenderer>
   props: CanvasProps
-  raycaster: Instance<Raycaster | EventRaycaster>
+  raycaster: Meta<Raycaster | EventRaycaster>
   render: (delta: number) => void
   requestRender: () => void
   setCurrentCamera(camera: CameraKind): () => void
-  scene: Instance<Scene>
+  scene: Meta<Scene>
   viewport: Viewport
   xr: {
     connect: () => void
@@ -65,6 +65,13 @@ export type Loader<TSource, TResult extends object> = {
     onReject: ((error: ErrorEvent | unknown) => void) | undefined,
   ) => unknown
 }
+
+export type FrameListenerCallback = (context: Context, delta: number, frame?: XRFrame) => void
+export type FrameListenerOptions = { priority?: number; stage?: "before" | "after" }
+export type FrameListener = (
+  callback: FrameListenerCallback,
+  options?: FrameListenerOptions,
+) => () => void
 
 /**********************************************************************************/
 /*                                                                                */
@@ -145,36 +152,34 @@ export type Matrix4 = Representation<ThreeMatrix4>
 /*                                                                                */
 /**********************************************************************************/
 
-/** Instance of a given constructor augmented with `S3Metadata`. Defaults to `ThreeConstructor`*/
-export type Instance<T extends object | unknown = Constructor> = Augment<InstanceFromConstructor<T>>
-
-export type Augment<T> = T & {
-  [$S3C]: Metadata<T>
+export type Meta<T = unknown> = T & {
+  [$S3C]: Data<T>
 }
 
 /** Metadata of a `solid-three` instance. */
-export type Metadata<T extends object | unknown> = {
-  props: Props<InstanceFromConstructor<T>>
-  children: Set<Instance>
+export type Data<T> = {
+  props: Props<InstanceOf<T>>
+  children: Set<Meta<unknown>>
 }
 
 /** Generic `solid-three` component. */
 export type Component<T> = SolidComponent<Props<T>>
 
 /** Maps properties of given type to their `solid-three` representations. */
-type MapToRepresentation<T> = {
+export type MapToRepresentation<T> = {
   [TKey in keyof T]: Representation<T[TKey]>
 }
 
 /** Generic `solid-three` props of a given class. */
-export type Props<T extends object | unknown> = Partial<
+export type Props<T> = Partial<
   Overwrite<
-    MapToRepresentation<InstanceFromConstructor<T>>,
+    MapToRepresentation<InstanceOf<T>>,
     {
       args: T extends Constructor ? ConstructorOverloadParameters<T> : undefined
-      attach: string | ((parent: Instance<typeof ThreeObject3D>, self: Instance<T>) => () => void)
-      children?: JSX.Element
-      onUpdate: (self: Instance<InstanceFromConstructor<T>>) => void
+      attach: string | ((parent: Meta<Object3D>, self: Meta<InstanceOf<T>>) => () => void)
+      ref: Ref<InstanceOf<T>>
+      children: JSX.Element
+      onUpdate: (self: Meta<InstanceOf<T>>) => void
       /**
        * Prevents the Object3D from being cast by the ray.
        * Object3D can still receive events via propagation from its descendants.
@@ -194,8 +199,7 @@ export type Props<T extends object | unknown> = Partial<
 export type Constructor<T = any> = new (...args: any[]) => T
 
 /** Extracts the instance from a constructor. */
-export type InstanceFromConstructor<TConstructor extends object | unknown> =
-  TConstructor extends Constructor<infer TObject> ? TObject : TConstructor
+export type InstanceOf<T> = T extends Constructor<infer TObject> ? TObject : T
 
 /** Overwrites the properties in `T` with the properties from `O`. */
 export type Overwrite<T, O> = Omit<T, keyof O> & O

@@ -11,7 +11,7 @@ import * as THREE from "three"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 import { createT, Entity, Portal, useFrame, useThree } from "../../src/index.ts"
 import { test } from "../../src/testing/index.tsx"
-import type { Context, Instance } from "../../src/types.ts"
+import type { Context, Meta } from "../../src/types.ts"
 
 type ComponentMesh = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>
 
@@ -700,7 +700,7 @@ describe("renderer", () => {
   })
 
   it("can handle createPortal on unmounted container", async () => {
-    const [group, setGroup] = createSignal<Instance<THREE.Group> | null>(null)
+    const [group, setGroup] = createSignal<Meta<THREE.Group> | null>(null)
     const [key, setKey] = createSignal(1)
 
     function Test(props: any) {
