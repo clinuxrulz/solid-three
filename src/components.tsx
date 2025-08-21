@@ -71,11 +71,13 @@ export const Portal = (props: PortalProps) => {
 /**********************************************************************************/
 
 type EntityProps<T extends object | Constructor<object>> = Overwrite<
-  Props<T>,
-  {
-    from: T | undefined
-    children?: JSXElement
-  }
+  [
+    Props<T>,
+    {
+      from: T | undefined
+      children?: JSXElement
+    },
+  ]
 >
 /**
  * Wraps a `ThreeElement` and allows it to be used as a JSX-component within a `solid-three` scene.
@@ -97,10 +99,10 @@ export function Entity<T extends object | Constructor<object>>(props: EntityProp
           props,
         },
       ) as Meta<T>
+      useProps(instance, rest)
       return instance
     },
   )
-  useProps(memo, rest)
   return memo as unknown as JSX.Element
 }
 

@@ -10,39 +10,39 @@ import {
 } from "three"
 import { createThree } from "./create-three.tsx"
 import type { EventRaycaster } from "./raycasters.tsx"
-import type { Context, EventHandlers, Props } from "./types.ts"
+import type { CanvasEventHandlers, Context, Props } from "./types.ts"
 
 /**
  * Props for the Canvas component, which initializes the Three.js rendering context and acts as the root for your 3D scene.
  */
-export interface CanvasProps extends ParentProps<Partial<EventHandlers>> {
+export interface CanvasProps extends ParentProps<Partial<CanvasEventHandlers>> {
+  ref?: Ref<Context>
   class?: string
   /** Configuration for the camera used in the scene. */
   defaultCamera?: Partial<Props<PerspectiveCamera> | Props<OrthographicCamera>> | Camera
-  /** Configuration for the Scene instance. */
-  scene?: Partial<Props<Scene>> | Scene
+  /** Configuration for the Raycaster used for mouse and pointer events. */
+  defaultRaycaster?: Partial<Props<EventRaycaster>> | EventRaycaster | Raycaster
   /** Element to render while the main content is loading asynchronously.  */
   fallback?: JSX.Element
+  /** Toggles flat interpolation for texture filtering. */
+  flat?: boolean
+  /** Controls the rendering loop's operation mode. */
+  frameloop?: "never" | "demand" | "always"
   /** Options for the WebGLRenderer or a function returning a customized renderer. */
   gl?:
     | Partial<Props<WebGLRenderer>>
     | ((canvas: HTMLCanvasElement) => WebGLRenderer)
     | WebGLRenderer
-  /** Toggles between Orthographic and Perspective camera. */
-  orthographic?: boolean
-  /** Configuration for the Raycaster used for mouse and pointer events. */
-  raycaster?: Partial<Props<EventRaycaster>> | EventRaycaster | Raycaster
-  ref?: Ref<Context>
-  /** Custom CSS styles for the canvas container. */
-  style?: JSX.CSSProperties
-  /** Enables and configures shadows in the scene. */
-  shadows?: boolean | "basic" | "percentage" | "soft" | "variance" | WebGLRenderer["shadowMap"]
   /** Toggles linear interpolation for texture filtering. */
   linear?: boolean
-  /** Toggles flat interpolation for texture filtering. */
-  flat?: boolean
-  /** Controls the rendering loop's operation mode. */
-  frameloop?: "never" | "demand" | "always"
+  /** Toggles between Orthographic and Perspective camera. */
+  orthographic?: boolean
+  /** Configuration for the Scene instance. */
+  scene?: Partial<Props<Scene>> | Scene
+  /** Enables and configures shadows in the scene. */
+  shadows?: boolean | "basic" | "percentage" | "soft" | "variance" | WebGLRenderer["shadowMap"]
+  /** Custom CSS styles for the canvas container. */
+  style?: JSX.CSSProperties
 }
 
 /**

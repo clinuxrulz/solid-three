@@ -263,17 +263,19 @@ export const manageSceneGraph = <T extends Meta<Object3D>>(
           if (attachProp) {
             let target = parent
             const path = attachProp.split("-")
+
             while (true) {
               const property = path.shift()!
+
               if (path.length === 0) {
                 // @ts-expect-error TODO: fix type-error
                 target[property] = child
                 // @ts-expect-error TODO: fix type-error
-                onCleanup(() => (parent[attachProp] = undefined))
+                onCleanup(() => (target[property] = undefined))
                 break
               } else {
                 // @ts-expect-error TODO: fix type-error
-                target = parent[property]
+                target = target[property]
               }
             }
             return

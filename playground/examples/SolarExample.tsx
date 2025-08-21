@@ -98,6 +98,7 @@ function CelestialBody(
         ref={ref}
         position={props.position || [0, 0, 0]}
         rotation={props.rotation || [0, 0, 0]}
+        onPointerDown={console.log}
         onPointerEnter={() => setHovered(true)}
         onPointerLeave={() => setHovered(false)}
       >

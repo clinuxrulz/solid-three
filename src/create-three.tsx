@@ -195,10 +195,10 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
 
   const defaultRaycaster = createMemo(() =>
     augment<Raycaster | EventRaycaster>(
-      props.raycaster instanceof Raycaster ? props.raycaster : new CursorRaycaster(),
+      props.defaultRaycaster instanceof Raycaster ? props.defaultRaycaster : new CursorRaycaster(),
       {
         get props() {
-          return props.raycaster || {}
+          return props.defaultRaycaster || {}
         },
       },
     ),
@@ -314,8 +314,8 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
 
     // Manage raycaster
     createRenderEffect(() => {
-      if (!props.raycaster || props.raycaster instanceof Raycaster) return
-      useProps(defaultRaycaster, props.raycaster)
+      if (!props.defaultRaycaster || props.defaultRaycaster instanceof Raycaster) return
+      useProps(defaultRaycaster, props.defaultRaycaster)
     })
 
     // Manage gl
