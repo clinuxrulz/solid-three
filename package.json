@@ -1,6 +1,6 @@
 {
   "name": "solid-three",
-  "version": "0.3.0-next.9",
+  "version": "0.3.0-next.10",
   "description": "SolidJS bindings for ThreeJS",
   "repository": {
     "type": "git",
@@ -34,7 +34,7 @@
     ".": {
       "solid": {
         "development": "./dist/index.dev.solid.jsx",
-        "import": "./dist/index.solid.jsx"
+        "import": "./dist/index.dev.jsx"
       },
       "development": {
         "import": {
@@ -50,7 +50,7 @@
     "./testing": {
       "solid": {
         "development": "./dist/testing.dev.solid.jsx",
-        "import": "./dist/testing.solid.jsx"
+        "import": "./dist/testing.dev.jsx"
       },
       "development": {
         "import": {
@@ -63,6 +63,17 @@
         "default": "./dist/testing.js"
       }
     }
+  },
+  "typesVersions": {
+    "*": {
+      "testing": [
+        "./dist/testing/index.d.ts"
+      ]
+    }
+  },
+  "dependencies": {
+    "@solid-primitives/resize-observer": "^2.0.25",
+    "debounce": "^2.1.0"
   },
   "devDependencies": {
     "@jest/types": "^29.6.3",
@@ -106,17 +117,5 @@
   },
   "jest": {
     "preset": "scripts/jest/node"
-  },
-  "dependencies": {
-    "@solid-primitives/resize-observer": "^2.0.25",
-    "debounce": "^2.1.0"
-  },
-  "browser": {},
-  "typesVersions": {
-    "*": {
-      "testing": [
-        "./dist/testing/index.d.ts"
-      ]
-    }
   }
 }
