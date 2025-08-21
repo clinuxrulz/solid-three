@@ -192,7 +192,8 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
       },
     }),
   )
-  const raycaster = createMemo(() =>
+
+  const defaultRaycaster = createMemo(() =>
     augment<Raycaster | EventRaycaster>(
       props.raycaster instanceof Raycaster ? props.raycaster : new CursorRaycaster(),
       {
@@ -202,6 +203,9 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
       },
     ),
   )
+
+  const raycasterStack = new Stack<Raycaster>("raycaster")
+
   const gl = createMemo(() => {
     const gl =
       props.gl instanceof WebGLRenderer
@@ -257,8 +261,11 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
     get scene() {
       return scene()
     },
-    get raycaster() {
-      return raycaster()
+    get currentRaycaster() {
+      return raycasterStack.peek() || defaultRaycaster()
+    },
+    setCurrentRaycaster(raycaster: Raycaster) {
+      return raycasterStack.push(raycaster)
     },
     get gl() {
       return gl()
@@ -308,7 +315,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
     // Manage raycaster
     createRenderEffect(() => {
       if (!props.raycaster || props.raycaster instanceof Raycaster) return
-      useProps(raycaster, props.raycaster)
+      useProps(defaultRaycaster, props.raycaster)
     })
 
     // Manage gl

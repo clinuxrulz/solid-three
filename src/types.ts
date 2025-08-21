@@ -28,14 +28,15 @@ export interface Context {
   canvas: HTMLCanvasElement
   clock: Clock
   currentCamera: CameraKind
+  currentRaycaster: Raycaster | EventRaycaster
   dpr: number
   gl: Meta<WebGLRenderer>
   props: CanvasProps
-  raycaster: Meta<Raycaster | EventRaycaster>
   render: (delta: number) => void
   requestRender: () => void
-  setCurrentCamera(camera: CameraKind): () => void
   scene: Meta<Scene>
+  setCurrentCamera(camera: CameraKind): () => void
+  setCurrentRaycaster(camera: Raycaster): () => void
   viewport: Viewport
   xr: {
     connect: () => void

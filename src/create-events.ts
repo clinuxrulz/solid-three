@@ -98,8 +98,8 @@ function raycast<TNativeEvent extends MouseEvent | WheelEvent>(
   registry: Object3D[],
   event: TNativeEvent,
 ): Intersection<Meta<Object3D>>[] {
-  if ("update" in context.raycaster) {
-    context.raycaster.update(event, context)
+  if ("update" in context.currentRaycaster) {
+    context.currentRaycaster.update(event, context)
   }
 
   const nodeSet = new Set<Object3D>()
@@ -116,7 +116,7 @@ function raycast<TNativeEvent extends MouseEvent | WheelEvent>(
     stack.push(...object.children)
   }
 
-  return context.raycaster.intersectObjects(nodeSet.values().toArray(), false)
+  return context.currentRaycaster.intersectObjects(nodeSet.values().toArray(), false)
 }
 
 /**********************************************************************************/
@@ -169,7 +169,7 @@ function createMissableEventRegistry(
 
     // Phase #2 - Raycast remaining missed objects
     for (const remainingObject of missedObjects) {
-      const intersections = context.raycaster.intersectObject(remainingObject, true)
+      const intersections = context.currentRaycaster.intersectObject(remainingObject, true)
 
       // Bubble down intersections
       // if they haven't been visited before:
