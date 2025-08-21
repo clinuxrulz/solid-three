@@ -32,31 +32,35 @@
   },
   "exports": {
     ".": {
+      "solid": {
+        "development": "./dist/index.dev.solid.jsx",
+        "import": "./dist/index.solid.jsx"
+      },
       "development": {
         "import": {
-          "types": "./dist/index/index.d.ts",
-          "default": "./dist/index/dev.js"
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.dev.js"
         }
       },
       "import": {
-        "types": "./dist/index/index.d.ts",
-        "default": "./dist/index/index.js"
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
       }
     },
     "./testing": {
       "solid": {
-        "development": "./dist/testing/dev.jsx",
-        "import": "./dist/testing/index.jsx"
+        "development": "./dist/testing.dev.solid.jsx",
+        "import": "./dist/testing.solid.jsx"
       },
       "development": {
         "import": {
-          "types": "./dist/testing/index.d.ts",
-          "default": "./dist/testing/dev.js"
+          "types": "./dist/testing.d.ts",
+          "default": "./dist/testing.dev.js"
         }
       },
       "import": {
         "types": "./dist/testing/index.d.ts",
-        "default": "./dist/testing/index.js"
+        "default": "./dist/testing.js"
       }
     }
   },

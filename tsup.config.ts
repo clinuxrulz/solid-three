@@ -1,41 +1,58 @@
-import process from "node:process"
-import { defineConfig } from "tsup"
-import * as preset from "tsup-preset-solid"
+import { solidPlugin } from "esbuild-plugin-solid"
+import { defineConfig, type Options } from "tsup"
 
-const preset_options: preset.PresetOptions = {
-  entries: [
-    {
-      entry: "src/index.ts",
-      dev_entry: true,
-    },
-    {
-      entry: "src/testing/index.tsx",
-      name: "testing",
-      dev_entry: true,
-    },
-  ],
-  drop_console: false,
-}
-
-const CI =
-  process.env["CI"] === "true" ||
-  process.env["GITHUB_ACTIONS"] === "true" ||
-  process.env["CI"] === '"1"' ||
-  process.env["GITHUB_ACTIONS"] === '"1"'
+type Entry = { readonly entry: string; readonly name: string }
+type Variation = { readonly dev: boolean; readonly solid: boolean }
 
 export default defineConfig(config => {
   const watching = !!config.watch
 
-  const parsed_options = preset.parsePresetOptions(preset_options, watching)
+  const packageEntries: Entry[] = [
+    { entry: "src/index.ts", name: "index" },
+    { entry: "src/testing/index.tsx", name: "testing" },
+  ]
 
-  if (!watching && !CI) {
-    const package_fields = preset.generatePackageExports(parsed_options)
+  return packageEntries.flatMap(({ entry, name }, i) => {
+    const packageEntries: Variation[] = [
+      { dev: false, solid: false },
+      { dev: true, solid: false },
+      { dev: true, solid: true },
+    ]
 
-    console.log(`package.json: \n\n${JSON.stringify(package_fields, null, 2)}\n\n`)
+    return packageEntries.flatMap(({ dev, solid }, j) => {
+      const outFilename = `${name}${dev ? ".dev" : ""}${solid ? ".solid" : ""}`
 
-    // will update ./package.json with the correct export fields
-    preset.writePackageJson(package_fields)
-  }
+      return {
+        watch: watching,
+        target: "esnext",
+        format: "esm",
+        clean: i === 0,
+        dts: j === 0,
+        entry: { [outFilename]: entry },
+        treeshake: watching ? undefined : { preset: "safest" },
+        replaceNodeEnv: true,
+        esbuildOptions(options) {
+          options.define = {
+            ...options.define,
+            "process.env.NODE_ENV": dev ? `"development"` : `"production"`,
+            "process.env.PROD": dev ? "false" : "true",
+            "process.env.DEV": dev ? "true" : "false",
+            "import.meta.env.NODE_ENV": dev ? `"development"` : `"production"`,
+            "import.meta.env.PROD": dev ? "false" : "true",
+            "import.meta.env.DEV": dev ? "true" : "false",
+          }
+          options.jsx = "preserve"
 
-  return preset.generateTsupOptions(parsed_options)
+          if (!dev) options.drop = ["console", "debugger"]
+
+          return options
+        },
+        outExtension: ({ format }) => {
+          if (format === "esm" && solid) return { js: ".jsx" }
+          return {}
+        },
+        esbuildPlugins: !solid ? [solidPlugin() as any] : undefined,
+      } satisfies Options
+    })
+  })
 })
