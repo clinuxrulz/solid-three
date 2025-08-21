@@ -1,15 +1,15 @@
 {
   "name": "solid-three",
-  "version": "0.3.0-next.8",
+  "version": "0.3.0-next.9",
   "description": "SolidJS bindings for ThreeJS",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/solidjs-community/solid-three.git"
   },
   "type": "module",
-  "module": "./dist/index/index.js",
-  "main": "./dist/index/index.js",
-  "types": "./dist/index/index.d.ts",
+  "module": "./dist/index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "license": "MIT",
   "files": [
