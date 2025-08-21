@@ -23,7 +23,7 @@ describe("web Canvas", () => {
     let ref: Context
 
     render(() => (
-      <TestCanvas ref={ref}>
+      <TestCanvas ref={ref!}>
         <T.Group />
       </TestCanvas>
     ))

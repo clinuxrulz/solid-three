@@ -1,9 +1,9 @@
-import { buildGraph } from "src/utils.ts"
 import * as THREE from "three"
 import { describe, expect, it } from "vitest"
 import { createT, useFrame, useThree } from "../../src/index.ts"
 import { test } from "../../src/testing/index.tsx"
 import type { Context } from "../../src/types.ts"
+import { buildGraph } from "../../src/utils.ts"
 import { asyncUtils } from "../utils/async-utils.ts"
 
 const resolvers: (() => void)[] = []

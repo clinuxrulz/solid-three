@@ -196,7 +196,6 @@ describe("renderer", () => {
         <>
           <T.Mesh ref={immutableRef} />
           <T.Mesh ref={mutableRef} />
-          {/* @ts-expect-error TODO: fix type-error */}
           <T.Mesh ref={r => (mutableRefSpecific = r)} />
         </>
       )

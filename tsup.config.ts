@@ -1,3 +1,4 @@
+// @ts-expect-error
 import { solidPlugin } from "esbuild-plugin-solid"
 import { defineConfig, type Options } from "tsup"
 

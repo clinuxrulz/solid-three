@@ -1,6 +1,5 @@
 import type { Accessor, Context, JSX } from "solid-js"
 import { createRenderEffect, type MergeProps, mergeProps, onCleanup, type Ref } from "solid-js"
-import type { CameraKind, Constructor, Loader, Meta } from "src/types.ts"
 import {
   Camera,
   Material,
@@ -11,6 +10,7 @@ import {
   Vector3,
 } from "three"
 import { $S3C } from "./constants.ts"
+import type { CameraKind, Constructor, Loader, Meta } from "./types.ts"
 import type { Measure } from "./utils/use-measure.ts"
 
 /**********************************************************************************/

@@ -1,5 +1,5 @@
 import type { Accessor } from "solid-js"
-import type { Meta } from "src/types.ts"
+import type { Meta } from "../types.ts"
 import { augment } from "../utils.ts"
 import { Stack } from "./stack.ts"
 

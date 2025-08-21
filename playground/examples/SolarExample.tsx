@@ -1,7 +1,7 @@
 import { createEffect, createMemo, createSignal, Show, type ParentProps, type Ref } from "solid-js"
-import type { Meta } from "src/types.ts"
 import * as THREE from "three"
 import { Canvas, createT, Entity, useFrame } from "../../src/index.ts"
+import type { Meta } from "../../src/types.ts"
 import { OrbitControls } from "../controls/OrbitControls.tsx"
 
 const T = createT(THREE)
