@@ -1,6 +1,6 @@
 {
   "name": "solid-three",
-  "version": "0.3.0-next.10",
+  "version": "0.3.0-next.11",
   "description": "SolidJS bindings for ThreeJS",
   "repository": {
     "type": "git",
@@ -34,7 +34,7 @@
     ".": {
       "solid": {
         "development": "./dist/index.dev.solid.jsx",
-        "import": "./dist/index.dev.jsx"
+        "import": "./dist/index.dev.js"
       },
       "development": {
         "import": {
@@ -50,7 +50,7 @@
     "./testing": {
       "solid": {
         "development": "./dist/testing.dev.solid.jsx",
-        "import": "./dist/testing.dev.jsx"
+        "import": "./dist/testing.dev.js"
       },
       "development": {
         "import": {
