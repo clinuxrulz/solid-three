@@ -10,7 +10,7 @@ import {
   Vector3,
 } from "three"
 import { $S3C } from "./constants.ts"
-import type { CameraKind, Constructor, Loader, Meta } from "./types.ts"
+import type { CameraKind, Constructor, Data, Loader, Meta } from "./types.ts"
 import type { Measure } from "./utils/use-measure.ts"
 
 /**********************************************************************************/
@@ -39,35 +39,6 @@ export function autodispose<T extends { dispose?: () => void }>(object: T): T {
 
 /**********************************************************************************/
 /*                                                                                */
-/*                                  Auto Listen                                   */
-/*                                                                                */
-/**********************************************************************************/
-
-type WithUndefinedListener<T> = T extends (
-  type: infer Type,
-  listener: infer L,
-  ...args: infer A
-) => infer R
-  ? (type: Type, listener: L | undefined, ...args: A) => R
-  : never
-
-export function autolisten<
-  TTarget extends {
-    addEventListener(...args: any[]): void
-    removeEventListener(...args: any[]): void
-  },
->(
-  object: TTarget,
-): TTarget["addEventListener"] & WithUndefinedListener<TTarget["addEventListener"]> {
-  return ((type: any, callback: any, ...options: any[]) => {
-    if (callback === undefined || callback === null) return
-    object.addEventListener(type, callback, ...options)
-    onCleanup(() => object.removeEventListener(type, callback, ...options))
-  }) as any
-}
-
-/**********************************************************************************/
-/*                                                                                */
 /*                                     Augment                                    */
 /*                                                                                */
 /**********************************************************************************/
@@ -80,13 +51,23 @@ export function autolisten<
  * @param augmentation - additional data: `{ props }`
  * @returns the `three` instance with the additional data
  */
-export const augment = <T>(instance: T, augmentation = { props: {} }) => {
-  if (instance && typeof instance === "object" && $S3C in instance) {
-    return instance as Meta<T>
+export function meta<T>(instance: T, augmentation = { props: {} }) {
+  if (hasMeta(instance)) {
+    return instance
   }
-  // @ts-expect-error TODO: fix type-error
-  instance[$S3C] = { children: new Set(), ...augmentation }
-  return instance as Meta<T>
+  const _instance = instance as Meta<T>
+  _instance[$S3C] = { children: new Set(), parent: undefined, ...augmentation }
+  return _instance
+}
+
+export function getMeta<T = any>(value: Meta<T>): Data<T>
+export function getMeta<T = any>(value: object | Meta<T>): Data<T> | undefined
+export function getMeta(value: any) {
+  return hasMeta(value) ? value[$S3C] : undefined
+}
+
+export function hasMeta<T>(element: T): element is Meta<T> {
+  return typeof element === "object" && element && $S3C in element
 }
 
 /**********************************************************************************/
@@ -154,9 +135,6 @@ export const hasColorSpace = <
 export function isConstructor<T>(value: T | Constructor): value is Constructor {
   return typeof value === "function" && value.prototype !== undefined
 }
-
-export const isInstance = <T>(element: T): element is Meta<T> =>
-  typeof element === "object" && element && $S3C in element
 
 /**********************************************************************************/
 /*                                                                                */
@@ -286,11 +264,22 @@ export function withMultiContexts<TResult, T extends readonly [unknown?, ...unkn
 /*                                                                                */
 /**********************************************************************************/
 
-export function load<TSource, TResult extends object>(
-  loader: Loader<TSource, TResult>,
-  path: TSource,
-) {
-  return new Promise<TResult>((resolve, reject) => loader.load(path, resolve, undefined, reject))
+export function load<
+  const TIn extends string | string[],
+  const TPaths extends Record<string, TIn>,
+  TOut extends object,
+>(loader: Loader<TIn, TOut>, path: TPaths): Promise<{ [TKey in keyof TPaths]: Texture }>
+export function load<TIn extends string | string[], TOut extends object>(
+  loader: Loader<TIn, TOut>,
+  path: TIn,
+): Promise<TOut>
+export async function load(loader: Loader<any, any>, path: any) {
+  if (!Array.isArray(path) && typeof path === "object") {
+    return Object.entries(
+      await Promise.all(Object.keys(path).map(async path => [path, await load(loader, path)])),
+    )
+  }
+  return new Promise((resolve, reject) => loader.load(path, resolve, undefined, reject))
 }
 
 /**********************************************************************************/

@@ -10,14 +10,14 @@ import type { EventName, Meta } from "./types.ts"
  * @param type - The type of event to listen for (e.g., 'click', 'mouseenter').
  * @throws Throws an error if used outside of the Canvas component context.
  */
-export const addToEventListeners = (object: Meta<Object3D>, type: EventName) => {
+export const addToEventListeners = <T extends Object3D>(object: Meta<T>, type: EventName) => {
   const addToEventListeners = useContext(eventContext)
   if (!addToEventListeners) {
     throw new Error("S3: Hooks can only be used within the Canvas component!")
   }
   return addToEventListeners(object, type)
 }
-export const eventContext = createContext<(object: Meta<Object3D>, type: EventName) => () => void>()
+export const eventContext = createContext<(object: Meta<any>, type: EventName) => () => void>()
 
 /**
  * This function facilitates the rendering of JSX elements outside the normal scene

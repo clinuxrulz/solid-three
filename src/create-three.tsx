@@ -28,14 +28,14 @@ import { createEvents } from "./create-events.ts"
 import { Stack } from "./data-structure/stack.ts"
 import { frameContext, threeContext } from "./hooks.ts"
 import { eventContext } from "./internal-context.ts"
-import { manageSceneGraph, useProps } from "./props.ts"
+import { useProps, useSceneGraph } from "./props.ts"
 import { CursorRaycaster, type EventRaycaster } from "./raycasters.tsx"
 import type { CameraKind, Context, FrameListener, FrameListenerCallback } from "./types.ts"
 import {
-  augment,
   binarySearch,
   defaultProps,
   getCurrentViewport,
+  meta,
   removeElementFromArray,
   useRef,
   withMultiContexts,
@@ -170,7 +170,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   /**********************************************************************************/
 
   const defaultCamera = createMemo(() =>
-    augment(
+    meta(
       props.defaultCamera instanceof Camera
         ? (props.defaultCamera as OrthographicCamera | PerspectiveCamera)
         : props.orthographic
@@ -186,7 +186,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   const cameraStack = new Stack<CameraKind>("camera")
 
   const scene = createMemo(() =>
-    augment(props.scene instanceof Scene ? props.scene : new Scene(), {
+    meta(props.scene instanceof Scene ? props.scene : new Scene(), {
       get props() {
         return props.scene || {}
       },
@@ -194,7 +194,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   )
 
   const defaultRaycaster = createMemo(() =>
-    augment<Raycaster | EventRaycaster>(
+    meta<Raycaster | EventRaycaster>(
       props.defaultRaycaster instanceof Raycaster ? props.defaultRaycaster : new CursorRaycaster(),
       {
         get props() {
@@ -217,7 +217,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
         : // if props.gl is not defined we default to a WebGLRenderer
           new WebGLRenderer({ canvas })
 
-    return augment(gl, {
+    return meta(gl, {
       get props() {
         return props.gl || {}
       },
@@ -406,16 +406,21 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   /*                                                                                */
   /**********************************************************************************/
 
-  manageSceneGraph(
-    // @ts-expect-error TODO: fix type-error
+  const c = children(() => (
+    <eventContext.Provider value={addEventListener}>
+      <frameContext.Provider value={addFrameListener}>
+        <threeContext.Provider value={context}>{canvasProps.children}</threeContext.Provider>
+      </frameContext.Provider>
+    </eventContext.Provider>
+  ))
+
+  useSceneGraph(
     context.scene,
-    children(() => (
-      <eventContext.Provider value={addEventListener}>
-        <frameContext.Provider value={addFrameListener}>
-          <threeContext.Provider value={context}>{canvasProps.children}</threeContext.Provider>
-        </frameContext.Provider>
-      </eventContext.Provider>
-    )) as any,
+    mergeProps(props, {
+      get children() {
+        return c()
+      },
+    }),
   )
 
   // Return context merged with `addFrameListeners``

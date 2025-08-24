@@ -1,7 +1,7 @@
-import { createMemo, type JSX, mergeProps } from "solid-js"
+import { createMemo, type Component, type JSX } from "solid-js"
 import { useProps } from "./props.ts"
-import type { Component } from "./types.ts"
-import { augment } from "./utils.ts"
+import type { Props } from "./types.ts"
+import { meta } from "./utils.ts"
 
 /**********************************************************************************/
 /*                                                                                */
@@ -12,7 +12,7 @@ import { augment } from "./utils.ts"
 export function createT<TCatalogue extends Record<string, unknown>>(catalogue: TCatalogue) {
   const cache = new Map<string, Component<any>>()
   return new Proxy<{
-    [K in keyof TCatalogue]: Component<TCatalogue[K]>
+    [K in keyof TCatalogue]: Component<Props<TCatalogue[K]>>
   }>({} as any, {
     get: (_, name: string) => {
       /* Create and memoize a wrapper component for the specified property. */
@@ -39,12 +39,15 @@ export function createT<TCatalogue extends Record<string, unknown>>(catalogue: T
  * @param Constructor - The constructor from which the component will be created.
  * @returns The created component.
  */
-export function createEntity<TConstructor>(Constructor: TConstructor): Component<TConstructor> {
-  return (props: any) => {
-    const merged = mergeProps({ args: [] }, props)
+export function createEntity<TConstructor>(
+  Constructor: TConstructor,
+): Component<Props<TConstructor>> {
+  return (props: Props<TConstructor>) => {
     const memo = createMemo(() => {
+      // listen to key changes
+      props.key
       try {
-        return augment(new (Constructor as any)(...merged.args), { props })
+        return meta(new (Constructor as any)(...(props.args ?? [])), { props })
       } catch (e) {
         console.error(e)
         throw new Error("")

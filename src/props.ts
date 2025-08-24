@@ -1,7 +1,9 @@
 import {
   type Accessor,
   children,
+  createComputed,
   createRenderEffect,
+  type JSXElement,
   mapArray,
   onCleanup,
   splitProps,
@@ -11,44 +13,126 @@ import {
   BufferGeometry,
   Color,
   Fog,
-  Layers,
   Material,
   Object3D,
   RGBAFormat,
   Texture,
   UnsignedByteType,
 } from "three"
-import { $S3C } from "./constants.ts"
 import { isEventType } from "./create-events.ts"
 import { useThree } from "./hooks.ts"
 import { addToEventListeners } from "./internal-context.ts"
-import type { Context, Meta } from "./types.ts"
-import { hasColorSpace, isInstance, resolve } from "./utils.ts"
+import type { AccessorMaybe, Context, Meta } from "./types.ts"
+import { getMeta, hasColorSpace, hasMeta, resolve } from "./utils.ts"
 
-/**********************************************************************************/
-/*                                                                                */
-/*                                   Apply Props                                  */
-/*                                                                                */
-/**********************************************************************************/
+function isWritable(object: object, propertyName: string) {
+  return Object.getOwnPropertyDescriptor(object, propertyName)?.writable
+}
 
-function applyProps<T extends Record<string, any>>(
-  context: Pick<Context, "requestRender" | "gl" | "props">,
-  object: T,
-  props: any,
-) {
-  const keys = Object.keys(props)
-  for (const key of keys) {
-    // An array of sub-property-keys:
-    // p.ex in <T.Mesh position={} position-x={}/> position's subKeys will be ['position-x']
-    const subKeys = keys.filter(_key => key !== _key && _key.includes(key))
-    createRenderEffect(() => {
-      applyProp(context, object, key, props[key])
-      // If property updates, apply its sub-properties immediately after.
-      for (const subKey of subKeys) {
-        applyProp(context, object, subKey, props[subKey])
-      }
-    })
+function applySceneGraph(parent: object, child: object) {
+  const parentMeta = getMeta(parent)
+  if (parentMeta) {
+    // Update parent's augmented children-property.
+    parentMeta.children.add(child)
+    onCleanup(() => parentMeta.children.delete(child))
   }
+
+  const childMeta = getMeta(child)
+  if (childMeta) {
+    // Update parent's augmented children-property.
+    childMeta.parent = parent
+    onCleanup(() => (childMeta.parent = undefined))
+  }
+
+  let attachProp = childMeta?.props.attach
+
+  // Attach-prop can be a callback. It returns a cleanup-function.
+  if (typeof attachProp === "function") {
+    const cleanup = attachProp(parent, child as Meta)
+    onCleanup(cleanup)
+    return
+  }
+
+  // Defaults for Material, BufferGeometry and Fog.
+  if (!attachProp) {
+    if (child instanceof Material) attachProp = "material"
+    else if (child instanceof BufferGeometry) attachProp = "geometry"
+    else if (child instanceof Fog) attachProp = "fog"
+  }
+
+  // If an attachProp is defined, attach the child to the parent.
+  if (attachProp) {
+    let target = parent
+    let property: string | undefined
+
+    const path = attachProp.split("-")
+
+    while ((property = path.shift())) {
+      if (path.length === 0) {
+        // @ts-expect-error TODO: fix type-error
+        target[property] = child
+        // @ts-expect-error TODO: fix type-error
+        onCleanup(() => (target[property] = undefined))
+        break
+      } else {
+        // @ts-expect-error TODO: fix type-error
+        target = target[property]
+      }
+    }
+
+    return
+  }
+
+  // If no attach-prop is defined, add the child to the parent.
+  if (child instanceof Object3D && parent instanceof Object3D && !parent.children.includes(child)) {
+    parent.add(child)
+    onCleanup(() => parent.remove(child))
+    return child
+  }
+
+  console.error(
+    "Error while connecting/attaching child: child does not have attach-props defined and is not an Object3D",
+    parent,
+    child,
+  )
+}
+
+/**********************************************************************************/
+/*                                                                                */
+/*                                   Scene Graph                                  */
+/*                                                                                */
+/**********************************************************************************/
+
+/**
+ * Dynamically attaches/connects child elements to a parent within a scene graph based on specified attachment properties.
+ * The function supports different attachment behaviors:
+ * - Direct assignment for standard properties like material, geometry, or fog.
+ * - Custom attachment logic through a callback function provided in the attach property of the child.
+ * - Default behavior for Three.js Object3D instances where children are added to the parent's children array if no specific attach property is provided.
+ *
+ * @template T The type parameter for the elements in the scene graph.
+ * @param parent - The parent element to which children will be attached.
+ * @param childAccessor - A function returning the child or children to be managed.
+ */
+export const useSceneGraph = <T extends object>(
+  _parent: AccessorMaybe<T | undefined>,
+  props: { children?: JSXElement | JSXElement[]; onUpdate?(event: T): void },
+) => {
+  const c = children(() => props.children)
+  createComputed(
+    mapArray(
+      () => c.toArray() as unknown as (Meta<object> | undefined)[],
+      _child =>
+        createComputed(() => {
+          const parent = resolve(_parent)
+          if (!parent) return
+          const child = resolve(_child)
+          if (!child) return
+          applySceneGraph(parent, child)
+          props.onUpdate?.(parent)
+        }),
+    ),
+  )
 }
 
 /**********************************************************************************/
@@ -79,7 +163,7 @@ const NEEDS_UPDATE = [
  * @param type - The property name, which can include nested paths indicated by hyphens.
  * @param value - The value to be assigned to the property; can be of any appropriate type.
  */
-export function applyProp<T extends Record<string, any>>(
+function applyProp<T extends Record<string, any>>(
   context: Pick<Context, "requestRender" | "gl" | "props">,
   source: T,
   type: string,
@@ -123,8 +207,8 @@ export function applyProp<T extends Record<string, any>>(
   }
 
   if (isEventType(type)) {
-    if (source instanceof Object3D && isInstance(source)) {
-      const cleanup = addToEventListeners(source as Meta<Object3D>, type)
+    if (source instanceof Object3D && hasMeta(source)) {
+      const cleanup = addToEventListeners(source, type)
       onCleanup(cleanup)
     } else {
       console.error(
@@ -141,15 +225,9 @@ export function applyProp<T extends Record<string, any>>(
 
   try {
     // Copy if properties match signatures
-    if (target?.copy && target?.constructor === value?.constructor) {
+    if (target?.copy && target?.constructor === value?.constructor && !isWritable(source, type)) {
       target.copy(value)
-    }
-    // Layers have no copy function, we must therefore copy the mask property
-    else if (target instanceof Layers && value instanceof Layers) {
-      target.mask = value.mask
-    }
-    // Set array types
-    else if (target?.set && Array.isArray(value)) {
+    } else if (target?.set && Array.isArray(value)) {
       if (target.fromArray) target.fromArray(value)
       else target.set(...value)
     }
@@ -171,6 +249,7 @@ export function applyProp<T extends Record<string, any>>(
     else {
       // @ts-expect-error TODO: fix type-error
       source[type] = value
+
       // Auto-convert sRGB textures, for now ...
       // https://github.com/pmndrs/react-three-fiber/issues/344
       if (
@@ -196,110 +275,14 @@ export function applyProp<T extends Record<string, any>>(
       }
     }
   } finally {
+    if ("needsUpdate" in source) {
+      // @ts-expect-error
+      source.needsUpdate = true
+    }
     if (context.props.frameloop === "demand") {
       context.requestRender()
     }
   }
-}
-
-/**********************************************************************************/
-/*                                                                                */
-/*                                   Scene Graph                                  */
-/*                                                                                */
-/**********************************************************************************/
-
-/**
- * Dynamically attaches/connects child elements to a parent within a scene graph based on specified attachment properties.
- * The function supports different attachment behaviors:
- * - Direct assignment for standard properties like material, geometry, or fog.
- * - Custom attachment logic through a callback function provided in the attach property of the child.
- * - Default behavior for Three.js Object3D instances where children are added to the parent's children array if no specific attach property is provided.
- *
- * @template T The type parameter for the elements in the scene graph.
- * @param parent - The parent element to which children will be attached.
- * @param childAccessor - A function returning the child or children to be managed.
- */
-export const manageSceneGraph = <T extends Meta<Object3D>>(
-  parent: T,
-  childAccessor: Accessor<Meta | Meta[]>,
-) => {
-  createRenderEffect(
-    mapArray(
-      () => {
-        const result = resolve(childAccessor, true)
-        return Array.isArray(result) ? result : result ? [result] : []
-      },
-      _child =>
-        createRenderEffect(() => {
-          const child = resolve(_child)
-
-          // NOTE:  this happens currently more then I would expect.
-          if (!child) {
-            return
-          }
-
-          // Update parent's augmented children-property.
-          parent[$S3C].children.add(child)
-          onCleanup(() => parent[$S3C].children.delete(child))
-
-          // Attaching children first. If a child is attached it will not be added to the parent's children.
-          let attachProp = child[$S3C]?.props?.attach
-
-          // Attach-prop can be a callback. It returns a cleanup-function.
-          if (typeof attachProp === "function") {
-            const cleanup = attachProp(parent, child)
-            onCleanup(cleanup)
-            return
-          }
-
-          // Defaults for Material, BufferGeometry and Fog.
-          if (!attachProp) {
-            if (child instanceof Material) attachProp = "material"
-            else if (child instanceof BufferGeometry) attachProp = "geometry"
-            else if (child instanceof Fog) attachProp = "fog"
-          }
-
-          // If an attachProp is defined, attach the child to the parent.
-          if (attachProp) {
-            let target = parent
-            const path = attachProp.split("-")
-
-            while (true) {
-              const property = path.shift()!
-
-              if (path.length === 0) {
-                // @ts-expect-error TODO: fix type-error
-                target[property] = child
-                // @ts-expect-error TODO: fix type-error
-                onCleanup(() => (target[property] = undefined))
-                break
-              } else {
-                // @ts-expect-error TODO: fix type-error
-                target = target[property]
-              }
-            }
-            return
-          }
-
-          // If no attach-prop is defined, add the child to the parent.
-          if (
-            child instanceof Object3D &&
-            parent instanceof Object3D &&
-            !parent.children.includes(child)
-          ) {
-            parent.add(child)
-            onCleanup(() => parent.remove(child))
-            return child
-          }
-
-          console.error(
-            "Error while connecting/attaching child: child does not have attach-props defined and is not an Object3D",
-            parent,
-            child,
-          )
-        }),
-    ),
-  )
 }
 
 /**********************************************************************************/
@@ -314,49 +297,50 @@ export const manageSceneGraph = <T extends Meta<Object3D>>(
  * attachment of children and the disposal of the object.
  *
  * @template T - The type of the augmented element.
- * @param object - An accessor function that returns the target object to which properties will be applied.
+ * @param accessor - An accessor function that returns the target object to which properties will be applied.
  * @param props - An object containing the props to apply. This includes both direct properties
  *                and special properties like `ref` and `children`.
  */
 export function useProps<T extends Record<string, any>>(
-  object: T | undefined | Accessor<T | undefined>,
+  accessor: T | undefined | Accessor<T | undefined>,
   props: any,
   context: Pick<Context, "requestRender" | "gl" | "props"> = useThree(),
 ) {
   const [local, instanceProps] = splitProps(props, ["ref", "args", "object", "attach", "children"])
 
-  createRenderEffect(() => {
-    const _object = resolve(object)
+  useSceneGraph(accessor, props)
 
-    if (!_object) return
+  createRenderEffect(() => {
+    const object = resolve(accessor)
+
+    if (!object) return
 
     // Assign ref
     createRenderEffect(() => {
-      if (local.ref instanceof Function) local.ref(_object)
-      else local.ref = _object
-    })
-
-    createRenderEffect(() => {
-      if ("children" in props) {
-        // Connect or attach children to THREE-instance
-        const childrenAccessor = children(() => props.children)
-        // @ts-expect-error TODO: fix type-error
-        manageSceneGraph(_object, childrenAccessor as unknown as Accessor<Meta>)
-      }
+      if (local.ref instanceof Function) local.ref(object)
+      else local.ref = object
     })
 
     // Apply the props to THREE-instance
     createRenderEffect(() => {
-      applyProps(context, _object, instanceProps)
-      // NOTE: see "onUpdate should not update itself"-test
-      untrack(() => props.onUpdate)?.(_object)
-    })
-
-    // Automatically dispose
-    onCleanup(() => () => {
-      if ("dispose" in _object && typeof _object.dispose === "function") {
-        _object.dispose()
+      const keys = Object.keys(instanceProps)
+      for (const key of keys) {
+        // An array of sub-property-keys:
+        // p.ex in <T.Mesh position={} position-x={}/> position's subKeys will be ['position-x']
+        const subKeys = keys.filter(_key => key !== _key && _key.includes(key))
+        createRenderEffect(() => {
+          applyProp(context, object, key, props[key])
+          // If property updates, apply its sub-properties immediately after.
+          // NOTE:  Discuss - is this expected behavior? Feature or a bug?
+          //        Should it be according to order of update instead?
+          for (const subKey of subKeys) {
+            applyProp(context, object, subKey, props[subKey])
+          }
+        })
       }
+
+      // NOTE: see "onUpdate should not update itself"-test
+      untrack(() => props.onUpdate)?.(object)
     })
   })
 }

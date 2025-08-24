@@ -1,9 +1,8 @@
-import type { JSX, Ref, Component as SolidComponent } from "solid-js"
+import type { Accessor, JSX, Ref } from "solid-js"
 import type {
   Clock,
   ColorRepresentation,
   Intersection,
-  Object3D,
   OrthographicCamera,
   PerspectiveCamera,
   Raycaster,
@@ -19,6 +18,7 @@ import type {
   Vector4 as ThreeVector4,
   WebGLRenderer,
 } from "three"
+import type { Intersect } from "../playground/controls/type-utils.ts"
 import type { CanvasProps } from "./canvas.tsx"
 import type { $S3C } from "./constants.ts"
 import type { EventRaycaster } from "./raycasters.tsx"
@@ -29,6 +29,8 @@ import type { Measure } from "./utils/use-measure.ts"
 /*                                      Utils                                     */
 /*                                                                                */
 /**********************************************************************************/
+
+export type AccessorMaybe<T> = T | Accessor<T>
 
 /** Generic constructor. Returns instance of given type. Defaults to any. */
 export type Constructor<T = any> = new (...args: any[]) => T
@@ -115,7 +117,7 @@ export type ConstructorOverloadParameters<T extends Constructor> = T extends {
   : never
 
 /**********************************************************************************/
-/*                                                                                */
+/*                                                s                                */
 /*                                     Context                                    */
 /*                                                                                */
 /**********************************************************************************/
@@ -177,39 +179,53 @@ export type FrameListener = (
 /*                                                                                */
 /**********************************************************************************/
 
-export interface BaseEvent<TEvent> {
-  nativeEvent: TEvent
-}
+export type When<T, U> = T extends false ? (T extends true ? U : unknown) : U
 
-export interface StoppableEvent<TEvent> extends BaseEvent<TEvent> {
-  stopped: boolean
-  stopPropagation: () => void
-}
-
-export interface ThreeEvent<TEvent = Event> extends StoppableEvent<TEvent> {
-  intersections: Intersection[]
-  intersection: Intersection
-  currentIntersection: Intersection
-}
+export type ThreeEvent<
+  TEvent,
+  TConfig extends { stoppable?: boolean; intersections?: boolean } = {
+    stoppable: true
+    intersections: true
+  },
+> = Intersect<
+  [
+    { nativeEvent: TEvent },
+    When<
+      TConfig["stoppable"],
+      {
+        stopped: boolean
+        stopPropagation: () => void
+      }
+    >,
+    When<
+      TConfig["intersections"],
+      {
+        currentIntersection: Intersection
+        intersection: Intersection
+        intersections: Intersection[]
+      }
+    >,
+  ]
+>
 
 type EventHandlersMap = {
-  onClick: ThreeEvent<MouseEvent>
-  onClickMissed: BaseEvent<MouseEvent>
-  onDoubleClick: ThreeEvent<MouseEvent>
-  onDoubleClickMissed: BaseEvent<MouseEvent>
-  onContextMenu: ThreeEvent<MouseEvent>
-  onContextMenuMissed: BaseEvent<MouseEvent>
-  onMouseDown: ThreeEvent<MouseEvent>
-  onMouseEnter: BaseEvent<MouseEvent>
-  onMouseLeave: BaseEvent<MouseEvent>
-  onMouseMove: ThreeEvent<MouseEvent>
-  onMouseUp: ThreeEvent<MouseEvent>
-  onPointerUp: ThreeEvent<MouseEvent>
-  onPointerDown: ThreeEvent<MouseEvent>
-  onPointerMove: ThreeEvent<MouseEvent>
-  onPointerEnter: BaseEvent<MouseEvent>
-  onPointerLeave: BaseEvent<MouseEvent>
-  onWheel: ThreeEvent<WheelEvent>
+  onClick: Prettify<ThreeEvent<MouseEvent>>
+  onClickMissed: Prettify<ThreeEvent<MouseEvent, { stoppable: false; intersections: false }>>
+  onDoubleClick: Prettify<ThreeEvent<MouseEvent>>
+  onDoubleClickMissed: Prettify<ThreeEvent<MouseEvent, { stoppable: false; intersections: false }>>
+  onContextMenu: Prettify<ThreeEvent<MouseEvent>>
+  onContextMenuMissed: Prettify<ThreeEvent<MouseEvent, { stoppable: false; intersections: false }>>
+  onMouseDown: Prettify<ThreeEvent<MouseEvent>>
+  onMouseEnter: Prettify<ThreeEvent<MouseEvent, { stoppable: false }>>
+  onMouseLeave: Prettify<ThreeEvent<MouseEvent, { stoppable: false }>>
+  onMouseMove: Prettify<ThreeEvent<MouseEvent>>
+  onMouseUp: Prettify<ThreeEvent<MouseEvent>>
+  onPointerUp: Prettify<ThreeEvent<PointerEvent>>
+  onPointerDown: Prettify<ThreeEvent<PointerEvent>>
+  onPointerMove: Prettify<ThreeEvent<PointerEvent>>
+  onPointerEnter: Prettify<ThreeEvent<PointerEvent, { stoppable: false }>>
+  onPointerLeave: Prettify<ThreeEvent<PointerEvent, { stoppable: false }>>
+  onWheel: Prettify<ThreeEvent<WheelEvent>>
 }
 
 export type EventHandlers = {
@@ -270,11 +286,9 @@ export type Meta<T = unknown> = T & {
 /** Metadata of a `solid-three` instance. */
 export type Data<T> = {
   props: Props<InstanceOf<T>>
-  children: Set<Meta<unknown>>
+  parent: any
+  children: Set<Meta<any>>
 }
-
-/** Generic `solid-three` component. */
-export type Component<T> = SolidComponent<Props<T>>
 
 /** Maps properties of given type to their `solid-three` representations. */
 export type MapToRepresentation<T> = {
@@ -289,10 +303,11 @@ export type Props<T> = Partial<
       EventHandlers,
       {
         args: T extends Constructor ? ConstructorOverloadParameters<T> : undefined
-        attach: string | ((parent: Meta<Object3D>, self: Meta<InstanceOf<T>>) => () => void)
-        ref: Ref<InstanceOf<T>>
+        attach: string | ((parent: object, self: Meta<InstanceOf<T>>) => () => void)
         children: JSX.Element
+        key?: string
         onUpdate: (self: Meta<InstanceOf<T>>) => void
+        ref: Ref<Meta<InstanceOf<T>>>
         /**
          * Prevents the Object3D from being cast by the ray.
          * Object3D can still receive events via propagation from its descendants.

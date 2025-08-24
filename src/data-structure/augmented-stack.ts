@@ -1,6 +1,6 @@
 import type { Accessor } from "solid-js"
 import type { Meta } from "../types.ts"
-import { augment } from "../utils.ts"
+import { meta } from "../utils.ts"
 import { Stack } from "./stack.ts"
 
 /** A generic stack data structure. It augments each value before pushing it onto the stack. */
@@ -21,8 +21,8 @@ export class AugmentedStack<T> {
   push(value: T | Accessor<T>) {
     const cleanup =
       typeof value === "function"
-        ? this.#stack.push(() => augment((value as Accessor<T>)()))
-        : this.#stack.push(augment(value))
+        ? this.#stack.push(() => meta((value as Accessor<T>)()))
+        : this.#stack.push(meta(value))
     return cleanup
   }
 }
