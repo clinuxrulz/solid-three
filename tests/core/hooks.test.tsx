@@ -22,9 +22,9 @@ describe("hooks", () => {
 
     test(() => <Component />)
 
-    expect(result.currentCamera instanceof THREE.Camera).toBeTruthy()
+    expect(result.camera instanceof THREE.Camera).toBeTruthy()
     expect(result.scene instanceof THREE.Scene).toBeTruthy()
-    expect(result.currentRaycaster instanceof THREE.Raycaster).toBeTruthy()
+    expect(result.raycaster instanceof THREE.Raycaster).toBeTruthy()
     // expect(result.size).toEqual({ height: 0, width: 0, top: 0, left: 0, updateStyle: false });
   })
 

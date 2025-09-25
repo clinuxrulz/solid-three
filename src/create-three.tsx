@@ -154,7 +154,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
 
     const delta = context.clock.getDelta()
     updateFrameListeners("before", delta, frame)
-    context.gl.render(context.scene, context.currentCamera)
+    context.gl.render(context.scene, context.camera)
     updateFrameListeners("after", delta, frame)
   }
   function requestRender() {
@@ -252,19 +252,19 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
     },
     xr,
     // elements
-    get currentCamera() {
+    get camera() {
       return cameraStack.peek() ?? defaultCamera()
     },
-    setCurrentCamera(camera: CameraKind) {
+    setCamera(camera: CameraKind) {
       return cameraStack.push(camera)
     },
     get scene() {
       return scene()
     },
-    get currentRaycaster() {
+    get raycaster() {
       return raycasterStack.peek() || defaultRaycaster()
     },
-    setCurrentRaycaster(raycaster: Raycaster) {
+    setRaycaster(raycaster: Raycaster) {
       return raycasterStack.push(raycaster)
     },
     get gl() {

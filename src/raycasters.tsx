@@ -12,7 +12,7 @@ export class CursorRaycaster extends Raycaster implements EventRaycaster {
   update(event: RayEvent, context: Context) {
     this.pointer.x = (event.offsetX / context.bounds.width) * 2 - 1
     this.pointer.y = -(event.offsetY / context.bounds.height) * 2 + 1
-    this.setFromCamera(this.pointer, context.currentCamera)
+    this.setFromCamera(this.pointer, context.camera)
   }
 }
 
@@ -25,6 +25,6 @@ export class CenterRaycaster extends Raycaster implements EventRaycaster {
       (offsetX / context.bounds.width) * 2 - 1,
       -(offsetY / context.bounds.height) * 2 + 1,
     )
-    this.setFromCamera(this.pointer, context.currentCamera)
+    this.setFromCamera(this.pointer, context.camera)
   }
 }

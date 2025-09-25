@@ -41,7 +41,7 @@ export function OrbitControls(props: OrbitControlsProps) {
   const three = useThree()
   const controls = createMemo<ThreeOrbitControls>(previous => {
     previous?.dispose()
-    return new ThreeOrbitControls(config.camera ?? three.currentCamera)
+    return new ThreeOrbitControls(config.camera ?? three.camera)
   })
 
   useFrame(() => controls().update())

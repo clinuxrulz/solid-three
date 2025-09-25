@@ -68,16 +68,16 @@ export function Canvas(props: ParentProps<CanvasProps>) {
       context.gl.setSize(width, height)
       context.gl.setPixelRatio(globalThis.devicePixelRatio)
 
-      if (context.currentCamera instanceof OrthographicCamera) {
-        context.currentCamera.left = width / -2
-        context.currentCamera.right = width / 2
-        context.currentCamera.top = height / 2
-        context.currentCamera.bottom = height / -2
+      if (context.camera instanceof OrthographicCamera) {
+        context.camera.left = width / -2
+        context.camera.right = width / 2
+        context.camera.top = height / 2
+        context.camera.bottom = height / -2
       } else {
-        context.currentCamera.aspect = width / height
+        context.camera.aspect = width / height
       }
 
-      context.currentCamera.updateProjectionMatrix()
+      context.camera.updateProjectionMatrix()
       context.render(performance.now())
     })
   })
