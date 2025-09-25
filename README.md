@@ -119,7 +119,7 @@ const Box = () => {
       onPointerEnter={e => setHovered(true)}
       onPointerLeave={e => setHovered(false)}
     >
-      <T.BoxGeometry />
+      <T.BoxGeometry args={[1, 1, 1]} />
       <T.MeshStandardMaterial color={hovered() ? "green" : "red"} />
     </T.Mesh>
   )
@@ -230,7 +230,7 @@ const T = createT({ Mesh, BoxGeometry, MeshBasicMaterial })
 const AdvancedProps = () => {
   return (
     <T.Mesh>
-      <T.BoxGeometry />
+      <T.BoxGeometry args={[1, 1, 1]} />
       <T.MeshStandardMaterial
         // Direct property setting
         color="red"
@@ -337,14 +337,14 @@ const App = () => {
   return (
     <Canvas>
       <T.Mesh>
-        <T.BoxGeometry />
+        <T.BoxGeometry args={[1, 1, 1]} />
         <T.MeshBasicMaterial color="blue" />
       </T.Mesh>
 
       {/* Render these objects into a different scene */}
       <Portal element={uiScene}>
         <T.Mesh position={[2, 0, 0]}>
-          <T.SphereGeometry />
+          <T.SphereGeometry args={[15, 32, 16]} />
           <T.MeshBasicMaterial color="red" />
         </T.Mesh>
       </Portal>
@@ -378,23 +378,10 @@ Provides access to the `three.js` context, including the renderer, scene, camera
 
 ```tsx
 // Get the entire context
-const context = useThree()
-const { gl, scene, camera } = context
+const three = useThree()
 
-// Use with a selector for specific properties (returns Accessor)
-const camera = useThree(state => state.camera)
-const cameraValue = camera() // Must call the accessor
-
-// Multiple values with selector
-const values = useThree(state => ({ gl: state.gl, scene: state.scene }))
-const { gl, scene } = values() // Must call the accessor
-
-// Example: Manual rendering control
-const context = useThree()
-const handleUpdate = () => {
-  // Perform updates
-  context.requestRender() // Request a render for the next frame
-}
+createEffect(() => console.log(three.camera))
+setInterval(() => three.requestRender(), 1_000)
 ```
 
 ### useFrame
@@ -415,14 +402,15 @@ useFrame((context: Context, delta: number, frame?: XRFrame) => void)
 
 ```tsx
 const RotatingMesh = () => {
+  let mesh: THREE.Mesh = null!
+
   useFrame((context, delta) => {
-    const { scene } = context
-    scene.children[0].rotation.y += delta * Math.PI
+    mesh.rotation.y += delta * Math.PI
   })
 
   return (
-    <T.Mesh>
-      <T.BoxGeometry />
+    <T.Mesh ref={mesh}>
+      <T.BoxGeometry args={[1, 1, 1]} />
       <T.MeshStandardMaterial color="purple" />
     </T.Mesh>
   )
@@ -623,9 +611,13 @@ The `raycastable` prop controls whether an Object3D can be targeted by raycastin
 - **raycastable** (`boolean`): When set to `false`, the object will not be hit by rays, but can still receive events through propagation from its descendants. Default is `true`.
 
 ```tsx
-<T.Mesh name="parent" raycastable={false} onClick={() => console.log("Child clicked!")}>
-  <T.Mesh name="child" />
-</T.Mesh>
+const RaycastableMesh = () => {
+  return (
+    <T.Mesh name="parent" raycastable={false} onClick={() => console.log("Child clicked!")}>
+      <T.Mesh name="child" />
+    </T.Mesh>
+  )
+}
 ```
 
 ### Supported Events
@@ -679,29 +671,33 @@ solid-three implements a dual propagation system for events:
    - If no object calls `stopPropagation()`, the event finally bubbles to the `<Canvas/>` component itself. This allows you to handle events at the canvas level, such as detecting clicks on empty space.
 
 ```tsx
-// Example showing all propagation types
-<Canvas onClick={() => console.log("4. Canvas clicked (canvas propagation)")}>
-  <T.Group onClick={() => console.log("3. Group clicked (tree propagation)")}>
-    <T.Mesh
-      position={[0, 0, 0]}
-      onClick={() => console.log("2. Back mesh clicked (raycast propagation)")}
-    >
-      <T.BoxGeometry />
-      <T.MeshBasicMaterial color="blue" />
-    </T.Mesh>
+const EventPropagation = () => {
+  // Example showing all propagation types
+  return (
+    <Canvas onClick={() => console.log("4. Canvas clicked (canvas propagation)")}>
+      <T.Group onClick={() => console.log("3. Group clicked (tree propagation)")}>
+        <T.Mesh
+          position={[0, 0, 0]}
+          onClick={() => console.log("2. Back mesh clicked (raycast propagation)")}
+        >
+          <T.BoxGeometry args={[1, 1, 1]} />
+          <T.MeshBasicMaterial color="blue" />
+        </T.Mesh>
 
-    <T.Mesh
-      position={[0, 0, 2]} // In front
-      onClick={e => {
-        console.log("1. Front mesh clicked (raycast propagation)")
-        e.stopPropagation() // Stops ALL propagation (raycast, tree, and canvas)
-      }}
-    >
-      <T.BoxGeometry />
-      <T.MeshBasicMaterial color="red" />
-    </T.Mesh>
-  </T.Group>
-</Canvas>
+        <T.Mesh
+          position={[0, 0, 2]} // In front
+          onClick={e => {
+            console.log("1. Front mesh clicked (raycast propagation)")
+            e.stopPropagation() // Stops ALL propagation (raycast, tree, and canvas)
+          }}
+        >
+          <T.BoxGeometry args={[1, 1, 1]} />
+          <T.MeshBasicMaterial color="red" />
+        </T.Mesh>
+      </T.Group>
+    </Canvas>
+  )
+}
 ```
 
 In this example, clicking the overlapping area would normally trigger events in this order:
@@ -727,49 +723,6 @@ Not all events in solid-three can be stopped with `stopPropagation()`. This desi
 
 - All other events (`onClick`, `onMouseMove`, `onPointerMove`, `onMouseDown`, etc.) can be stopped with `stopPropagation()`
 
-For non-stoppable events, the event object only contains the `nativeEvent` property:
-
-```tsx
-// Stoppable event
-onClick={e => {
-  e.stopPropagation() // ✓ Works
-  console.log(e.stopped) // ✓ Available
-}}
-
-// Non-stoppable event
-onClickMissed={e => {
-  e.stopPropagation() // ✗ Property doesn't exist
-  console.log(e.nativeEvent) // ✓ Available
-}}
-```
-
-**Example:**
-
-```tsx
-const InteractiveCube = () => {
-  const [hovered, setHovered] = createSignal(false)
-  const [clicked, setClicked] = createSignal(0)
-
-  return (
-    <T.Mesh
-      onClick={e => {
-        e.stopPropagation()
-        setClicked(c => c + 1)
-        console.log("Native event:", e.nativeEvent)
-      }}
-      onPointerMove={() => setHovered(true)}
-      onWheel={e => console.log("Wheel delta:", e.nativeEvent.deltaY)}
-    >
-      <T.BoxGeometry />
-      <T.MeshStandardMaterial
-        color={hovered() ? "hotpink" : "orange"}
-        emissive={clicked() > 0 ? "red" : "black"}
-      />
-    </T.Mesh>
-  )
-}
-```
-
 ### Missed Events
 
 The "missed" events (`onClickMissed`, `onDoubleClickMissed`, `onContextMenuMissed`) fire when an object has registered a missed event handler and the click/interaction didn't hit the object or any of its descendants.
@@ -779,17 +732,27 @@ The "missed" events (`onClickMissed`, `onDoubleClickMissed`, `onContextMenuMisse
 1. **Click outside object**: The click didn't intersect with the object or any of its descendants
 2. **Blocked by stopPropagation**: Another object called `stopPropagation()` preventing the event from reaching this object
 
+**Clicking outside the mesh**
+
 ```tsx
-const MissedEventExample = () => {
+const ClickOutside = () => {
   return (
-    <>
-      {/* Example 1: Click outside the mesh */}
+    <Canvas>
       <T.Mesh onClickMissed={() => console.log("Missed - clicked outside this mesh")}>
-        <T.BoxGeometry />
+        <T.BoxGeometry args={[1, 1, 1]} />
         <T.MeshBasicMaterial color="blue" />
       </T.Mesh>
+    </Canvas>
+  )
+}
+```
 
-      {/* Example 2: Blocked by tree propagation */}
+**Blocked by stopPropagation**
+
+```tsx
+const TreePropagation = () => {
+  return (
+    <Canvas>
       <T.Group onClickMissed={() => console.log("Group missed - child stopped propagation")}>
         <T.Mesh
           onClick={e => {
@@ -797,30 +760,39 @@ const MissedEventExample = () => {
             console.log("Child clicked")
           }}
         >
-          <T.BoxGeometry />
+          <T.BoxGeometry args={[1, 1, 1]} />
           <T.MeshBasicMaterial color="red" />
         </T.Mesh>
       </T.Group>
+    </Canvas>
+  )
+}
+```
 
-      {/* Example 3: Blocked by raycast propagation */}
+```tsx
+const RayPropagation = () => {
+  return (
+    <Canvas defaultCamera={{ position: [0, 0, 5] }}>
       <T.Mesh
-        position={[0, 0, 0]}
-        onClickMissed={() => console.log("Back mesh missed - front mesh blocked it")}
-      >
-        <T.BoxGeometry />
-        <T.MeshBasicMaterial color="green" />
-      </T.Mesh>
-      <T.Mesh
-        position={[0, 0, 2]} // In front
+        name="front mesh"
+        position={[0, 0, 2]}
         onClick={e => {
           e.stopPropagation()
           console.log("Front mesh clicked")
         }}
       >
-        <T.BoxGeometry />
+        <T.BoxGeometry args={[1, 1, 1]} />
         <T.MeshBasicMaterial color="yellow" />
       </T.Mesh>
-    </>
+      <T.Mesh
+        name="back mesh"
+        position={[0, 0, 0]}
+        onClickMissed={() => console.log("Back mesh missed - front mesh blocked it")}
+      >
+        <T.BoxGeometry args={[1, 1, 1]} />
+        <T.MeshBasicMaterial color="green" />
+      </T.Mesh>
+    </Canvas>
   )
 }
 ```
@@ -879,35 +851,39 @@ const AutoDisposedGeometry = () => {
   return (
     <T.Mesh>
       {/* Geometry and material are automatically disposed when component unmounts */}
-      <T.BoxGeometry />
+      <T.BoxGeometry args={[1, 1, 1]} />
       <T.MeshBasicMaterial color="red" />
     </T.Mesh>
   )
 }
 ```
 
-**Automatic disposal includes:**
-
-- Geometries (`dispose()` method called on unmount)
-- Materials (`dispose()` method called on unmount)
-- Textures (disposed when no longer referenced)
-- Other three.js objects with a `dispose()` method
-
 **Manual disposal:** If you need custom disposal behavior, you can handle cleanup manually:
 
 ```tsx
-const ManualDisposal = () => {
-  let geometry: BoxGeometry
+const Boxes = () => {
+  const geometry = new BoxGeometry(1, 1, 1)
+  const material = new MeshBasicMaterial()
 
-  const dispose = () => {
-    geometry?.dispose()
-  }
+  onCleanup(() => {
+    geometry.dispose()
+    material.dispose()
+  })
 
-  return <T.BoxGeometry ref={geometry} />
+  return <Index each={new Array(10)}>{() => <Mesh args={[geometry, material]} />}</Index>
 }
 ```
 
 or use the [`autodispose()`-utility](#autodispose)
+
+```tsx
+const Boxes = () => {
+  const geometry = autodispose(new BoxGeometry(1, 1, 1))
+  const material = autodispose(new MeshBasicMaterial())
+
+  return <Index each={new Array(10)}>{() => <Mesh args={[geometry, material]} />}</Index>
+}
+```
 
 ### Frame Loop Control
 
@@ -947,124 +923,17 @@ When using `frameloop="demand"` or `"never"`, you can manually trigger renders:
 
 ```tsx
 const ManualRender = () => {
-  const { render, requestRender } = useThree()
+  const three = useThree()
 
   // Immediate render
-  const forceRender = () => render()
+  const forceRender = () => three.render()
 
   // Request render on next frame
-  const updateScene = () => {
-    // Make changes
-    requestRender()
-  }
+  const updateScene = () => three.requestRender()
 
   return <T.Mesh onClick={updateScene} />
 }
 ```
-
-### Conditional Frame Updates
-
-Use conditional logic within `useFrame` for optimized updates:
-
-```tsx
-const OptimizedAnimation = () => {
-  let mesh: Mesh
-  const [isAnimating, setIsAnimating] = createSignal(true)
-
-  useFrame((context, delta) => {
-    if (!isAnimating()) return // Skip if not animating
-
-    mesh.rotation.y += delta
-  })
-
-  return <T.Mesh ref={mesh} onClick={() => setIsAnimating(!isAnimating())} />
-}
-```
-
-### Color Space Handling
-
-`solid-three` automatically handles color space conversions and legacy property aliasing:
-
-```tsx
-const ColorHandling = () => {
-  return (
-    <T.Mesh>
-      <T.PlaneGeometry />
-      {/* Color values are automatically converted */}
-      <T.MeshBasicMaterial
-        color="red" // String colors converted to THREE.Color
-        emissive={0xff0000} // Hex colors handled automatically
-        opacity={0.5} // Numeric values passed through
-      />
-    </T.Mesh>
-  )
-}
-```
-
-**Automatic conversions:**
-
-- String colors (`"red"`, `"#ff0000"`) → `THREE.Color`
-- Hex numbers (`0xff0000`) → `THREE.Color`
-- Array colors (`[1, 0, 0]`) → `THREE.Color`
-- Texture `encoding` property aliased to `colorSpace` for three.js r152+ compatibility
-
-### Texture Optimization
-
-Configure texture filtering for better performance:
-
-```tsx
-// Disable expensive texture filtering
-<Canvas linear={false} flat>
-  {/* Your scene */}
-</Canvas>
-```
-
-### Instance Reuse
-
-Reuse `three.js` objects across components:
-
-```tsx
-// Create shared geometry
-const sharedGeometry = new BoxGeometry(1, 1, 1)
-
-const OptimizedBoxes = () => {
-  return (
-    <>
-      {Array.from({ length: 100 }, (_, i) => (
-        <Primitive object={new Mesh(sharedGeometry)} position={[i * 2, 0, 0]} />
-      ))}
-    </>
-  )
-}
-```
-
-### Automatic Disposal
-
-`solid-three` automatically disposes of `three.js` objects when components unmount, preventing memory leaks. However, for shared resources, manage disposal manually:
-
-```tsx
-const SharedResource = () => {
-  const texture = useLoader(TextureLoader, "/texture.jpg")
-
-  onCleanup(() => {
-    // Manual cleanup for shared resources if needed
-    texture()?.dispose()
-  })
-
-  return <T.MeshBasicMaterial map={texture()} />
-}
-```
-
-## Differences from React-Three-Fiber
-
-While `solid-three` is heavily inspired by– and initially shared a lot of code with– react-three-fiber, there are currently several key differences:
-
-- **No `performance` Prop**: The `Canvas` component does not support a `performance` prop as optimization is handled differently in `solid-js`.
-- **Simplified Event Objects**: The event object provided to event handlers is more minimalistic.
-- **Minimal `useThree` Hook**: Returns a more concise context object, focusing on essential properties.
-- **Missed Events**: Implements `onClickMissed`, `onDoubleClickMissed`, and `onContextMenuMissed` for handling events on empty space or stopped propagation.
-- **TODO**:
-  - **No Pointer Capture**: Pointer events do not support pointer capture management.
 
 ## Contributing
 
