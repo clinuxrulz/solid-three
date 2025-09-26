@@ -1,5 +1,5 @@
+import { when, whenEffect } from "@bigmistqke/solid-whenever"
 import { createEffect, createMemo, createSignal, mergeProps, onCleanup } from "solid-js"
-import { when, whenEffect } from "./conditionals.ts"
 import { debounce as createDebounce } from "./debounce.ts"
 
 declare type ResizeObserverCallback = (entries: any[], observer: ResizeObserver) => void

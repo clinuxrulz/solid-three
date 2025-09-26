@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@bigmistqke/solid-whenever':
+        specifier: ^0.1.0
+        version: 0.1.0(solid-js@1.8.17)
       '@solid-primitives/resize-observer':
         specifier: ^2.0.25
         version: 2.0.25(solid-js@1.8.17)
@@ -338,6 +341,12 @@ packages:
 
   '@bcoe/v8-coverage@0.2.3':
     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
+
+  '@bigmistqke/solid-whenever@0.1.0':
+    resolution: {integrity: sha512-y17srABV22S0thB5suLp7lgNI4O8CXTrmx5FOO02dLx1BGqfTHmdxoo+RnyBLXhMtEwwuGCgQcpFgwvxfYs/2A==}
+    engines: {node: '>=18', pnpm: '>=9.0.0'}
+    peerDependencies:
+      solid-js: ^1.6.0
 
   '@esbuild/aix-ppc64@0.19.12':
     resolution: {integrity: sha512-bmoCYyWdEL3wDQIVbcyzRyeKLgk2WtWLTWz1ZIAZF/EGbNOwSA6ew3PftJ1PqMiOOGu0OyFMzG53L0zqIpPeNA==}
@@ -4196,6 +4205,10 @@ snapshots:
       to-fast-properties: 2.0.0
 
   '@bcoe/v8-coverage@0.2.3': {}
+
+  '@bigmistqke/solid-whenever@0.1.0(solid-js@1.8.17)':
+    dependencies:
+      solid-js: 1.8.17
 
   '@esbuild/aix-ppc64@0.19.12':
     optional: true

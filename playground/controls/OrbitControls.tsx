@@ -1,9 +1,9 @@
+import { whenEffect } from "@bigmistqke/solid-whenever"
 import { createEffect, createMemo, onCleanup, type Ref } from "solid-js"
 import type { Event } from "three"
 import { OrbitControls as ThreeOrbitControls } from "three-stdlib"
 import { useFrame, useThree, type S3 } from "../../src/index.ts"
 import { useProps } from "../../src/props.ts"
-import { whenEffect } from "../../src/utils/conditionals.ts"
 import { processProps } from "./process-props.ts"
 
 export interface OrbitControlsProps extends S3.Props<typeof ThreeOrbitControls> {

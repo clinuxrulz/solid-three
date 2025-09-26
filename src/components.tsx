@@ -1,3 +1,4 @@
+import { whenMemo } from "@bigmistqke/solid-whenever"
 import {
   type Accessor,
   type JSX,
@@ -9,13 +10,12 @@ import {
   mergeProps,
   splitProps,
 } from "solid-js"
-import { Object3D } from "three"
+import { Loader, Object3D } from "three"
 import { threeContext, useThree } from "./hooks.ts"
 import { useProps } from "./props.ts"
-import type { Constructor, Loader, Meta, Overwrite, Props } from "./types.ts"
+import type { Constructor, Meta, Overwrite, Props } from "./types.ts"
 import { type InstanceOf } from "./types.ts"
 import { autodispose, hasMeta, isConstructor, load, meta, withContext } from "./utils.ts"
-import { whenMemo } from "./utils/conditionals.ts"
 
 /**********************************************************************************/
 /*                                                                                */
@@ -118,15 +118,15 @@ export function Entity<T extends object | Constructor<object>>(props: EntityProp
 /*                                                                                */
 /**********************************************************************************/
 
-type ResourceProps<TSource, TResult extends object> = Omit<Props<TResult>, "children"> & {
-  loader: new () => Loader<TSource, TResult>
-  url: TSource
+type ResourceProps<TUrl, TResult extends object> = Omit<Props<TResult>, "children"> & {
+  loader: new () => Loader<TResult, TUrl>
+  url: TUrl
   path?: string
   children?: (result: Accessor<TResult>) => JSXElement
 }
 
-export function Resource<TSource extends string | string[], TResult extends object>(
-  props: ResourceProps<TSource, TResult>,
+export function Resource<TUrl extends string | string[], TResult extends object>(
+  props: ResourceProps<TUrl, TResult>,
 ) {
   const [config, rest] = splitProps(props, ["loader", "path", "url"])
   const loader = createMemo(() => new config.loader())
