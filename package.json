@@ -76,10 +76,8 @@
     "debounce": "^2.1.0"
   },
   "devDependencies": {
-    "@jest/types": "^29.6.3",
     "@solidjs/router": "^0.15.3",
     "@solidjs/testing-library": "^0.8.8",
-    "@types/node": "^18.19.33",
     "@types/three": "^0.164.1",
     "@typescript-eslint/eslint-plugin": "^8.38.0",
     "@typescript-eslint/parser": "^8.38.0",
