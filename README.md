@@ -406,34 +406,40 @@ const App = () => {
 
 ### Resource
 
-Declarative component for loading Three.js resources with automatic caching and Suspense integration. When no children are provided, the loaded resource is automatically rendered with any additional props passed through.
+Wrapper-component around ['useLoader'](#useloader).
 
 **Props:**
 
 - `loader` - Three.js loader constructor (e.g., `TextureLoader`, `GLTFLoader`)
-- `url` - URL(s) to load (string, array, or object)
+- `url` - URL(s) to load, depending on what the passed loader expects
 - `children` - Optional render function
 - `*` - Additional props are passed to the loaded resource
 
 **Examples:**
 
 ```tsx
-// Automatic attachment with the attach prop
+// CubeTextureLoader expects an array of strings
+<Resource loader={CubeTextureLoader} url={[
+  'px.png', 'nx.png',
+  'py.png', 'ny.png',
+  'pz.png', 'nz.png'
+]} />
+
+// Set props of the resulting resource
 <T.MeshStandardMaterial>
   <Resource loader={TextureLoader} url="diffuse.jpg" attach="map" />
   <Resource loader={TextureLoader} url="normal.jpg" attach="normalMap" />
 </T.MeshStandardMaterial>
 
-// Automatic model rendering with transform props
-<Resource loader={GLTFLoader} url="model.gltf" scale={2} position={[0, 1, 0]} />
-
 // Custom rendering with children function
-<Resource loader={TextureLoader} url="texture.jpg">
-  {texture => <T.MeshBasicMaterial map={texture()} />}
+<Resource loader={GLTFLoader} url="model.gltf">
+{
+  (gltf) => <Entity from={gltf.scene} scale={2} />
+}
 </Resource>
 
 // Disable caching for specific resources
-<Resource loader={TextureLoader} url="dynamic.jpg" cache={false} />
+<Resource loader={TextureLoader} url="/dynamic-texture.png" cache={false} />
 ```
 
 ## Hooks
@@ -466,27 +472,24 @@ Provides access to the `three.js` context, including the renderer, scene, camera
 - **Default at Tail**: The `defaultCamera` and `defaultRaycaster` from Canvas props form the tail of their respective stacks
 - **Current Active Camera at Head**: The camera/raycaster at the top of the stack is the currently active camera/raycaster
 - **Push To The Stack To Become Active**: By calling `setCamera(camera)` and `setRaycaster(raycaster)`, the camera/raycaster is pushed to the stack. This causes it to become the currently active camera/raycaster
-- **Easily Pop From The Stack**: `setCamera(camera)` and `setRaycaster(raycaster)` return a function to pop the camera/raycaster from the stack. If the camera/raycaster was on top of the stack, the previous camera/raycaster in the stack becomes active again
+- **Pop From The Stack To Deactivate**: `setCamera(camera)` and `setRaycaster(raycaster)` return a cleanup-function to pop the camera/raycaster from the stack. If the camera/raycaster was on top of the stack, the previous camera/raycaster in the stack becomes active again
 
 **Usage:**
 
 ```tsx
-const three = useThree()
-
-// Push a new camera onto the stack
-const restoreCamera = three.setCamera(myCustomCamera)
-
-// The custom camera is now active
-// When done, call the cleanup to restore previous camera
-restoreCamera()
-
-// Example with automatic cleanup
-createEffect(() => {
+function Camera(props) {
+  const three = useThree()
   const customCamera = new OrthographicCamera(/* ... */)
-  const restore = three.setCamera(customCamera)
 
-  onCleanup(restore) // Automatically restore previous camera when effect re-runs or unmounts
-})
+  // Push a new camera onto the stack
+  const restoreCamera = three.setCamera(customCamera)
+
+  // The custom camera is now active
+  // When done, call the cleanup to pop camera from the stack
+  onCleanup(restoreCamera)
+
+  return null!
+}
 ```
 
 **Practical Example - Camera Switching:**
@@ -593,38 +596,13 @@ const AnimatedMesh = () => {
 
 Manages asynchronous resource loading, such as textures or models, and integrates with `solid-js`' reactivity system. This hook can be used with Solid's `<Suspense>` to handle loading states.
 
-**Caching Behavior:**
-
-By default, `useLoader` automatically caches resources using the built-in [`LoaderCache`](#loadercache) implementation. This means:
-
-- Resources are only loaded once and shared across components
-- Automatic reference counting tracks resource usage
-- Resources are added to a freelist when not referenced
-- Each loader type maintains its own isolated namespace
+By default, `useLoader` automatically caches resources via [`LoaderCache`](#loadercache).
 
 You can customize caching behavior:
 
 1. **Disable caching**: Pass `cache: false` in options for specific resources
 2. **Custom cache**: Pass your own `LoaderRegistry` implementation in options
 3. **Replace global cache**: Set `useLoader.cache` to your own implementation or `undefined` to disable
-
-**Usage:**
-
-```tsx
-// Load a single resource
-const texture = useLoader(TextureLoader, url)
-const gltf = useLoader(GLTFLoader, "model.gltf")
-
-// Load multiple resources (with object keys)
-const textures = useLoader(TextureLoader, {
-  diffuse: "wood-diffuse.jpg",
-  normal: "wood-normal.jpg",
-})
-
-// Reactive URLs (can be signals or getters)
-const [url, setUrl] = createSignal("texture.jpg")
-const texture = useLoader(TextureLoader, url)
-```
 
 **Options:**
 
@@ -647,91 +625,27 @@ interface UseLoaderOptions<TLoader, TResult> {
 
 </details>
 
-#### Single Resource Loading
+#### Example
 
 ```tsx
-import { createSignal, Suspense } from "solid-js"
-import { Canvas, useLoader, createT } from "solid-three"
-import { TextureLoader } from "three"
-import * as THREE from "three"
+// Load a single resource
+const texture = useLoader(TextureLoader, url)
+const gltf = useLoader(GLTFLoader, "model.gltf")
 
-const T = createT({
-  Mesh: THREE.Mesh,
-  SphereGeometry: THREE.SphereGeometry,
-  MeshBasicMaterial: THREE.MeshBasicMaterial,
+// Load multiple resources (with object keys)
+const textures = useLoader(TextureLoader, {
+  diffuse: "wood-diffuse.jpg",
+  normal: "wood-normal.jpg",
 })
 
-const TexturedSphere = () => {
-  const [url, setUrl] = createSignal("path/to/texture.jpg")
-  const texture = useLoader(TextureLoader, url)
-
-  return (
-    <T.Mesh onClick={() => setUrl("path/to/other/texture.jpg")}>
-      <T.SphereGeometry args={[1, 32, 32]} />
-      <T.MeshBasicMaterial map={texture()} />
-    </T.Mesh>
-  )
-}
-
-const App = () => {
-  return (
-    <Canvas>
-      <Suspense fallback={<div>Loading...</div>}>
-        <TexturedSphere />
-      </Suspense>
-    </Canvas>
-  )
-}
+// Reactive URLs (can be signals or getters)
+const [url, setUrl] = createSignal("texture.jpg")
+const texture = useLoader(TextureLoader, url)
 ```
 
-#### Multiple Resource Loading
+#### Custom Cache
 
-```tsx
-import { For, Suspense } from "solid-js"
-import { Canvas, useLoader, createT } from "solid-three"
-import { TextureLoader } from "three"
-import * as THREE from "three"
-
-const T = createT({
-  Mesh: THREE.Mesh,
-  PlaneGeometry: THREE.PlaneGeometry,
-  MeshBasicMaterial: THREE.MeshBasicMaterial,
-})
-
-const TexturedPlanes = () => {
-  const textures = useLoader(TextureLoader, {
-    wood: "/textures/wood.jpg",
-    metal: "/textures/metal.jpg",
-  })
-
-  return (
-    <>
-      <T.Mesh position={[0, 0, 0]}>
-        <T.PlaneGeometry args={[2, 2]} />
-        <T.MeshBasicMaterial map={textures()?.wood} />
-      </T.Mesh>
-      <T.Mesh position={[0, 0, 0]}>
-        <T.PlaneGeometry args={[2, 2]} />
-        <T.MeshBasicMaterial map={textures()?.metal} />
-      </T.Mesh>
-    </>
-  )
-}
-
-const App = () => {
-  return (
-    <Canvas>
-      <Suspense>
-        <TexturedPlanes />
-      </Suspense>
-    </Canvas>
-  )
-}
-```
-
-#### Caching
-
-`solid-three` provides the `LoaderCache` class for caching, but you can also implement your own cache by conforming to the `LoaderRegistry` interface.
+`solid-three` by default caches useLoader via `LoaderCache`, but you can also implement your own cache by conforming to the `LoaderRegistry` interface.
 
 A cache registry needs two methods:
 
@@ -743,105 +657,21 @@ A cache registry needs two methods:
 
 ```tsx
 interface LoaderRegistry {
-  set<TData extends object, TUrl extends string | string[]>(
-    loader: Loader<TData, TUrl>,
-    url: TUrl,
-    data: Promise<TData>,
+  set<TLoader extends Loader<object, any>>(
+    loader: TLoader,
+    url: LoaderUrl<TLoader>,
+    data: PromiseMaybe<LoaderData<TLoader>>,
   ): void
 
-  get<TData extends object, TUrl extends string | string[]>(
+  get<TLoader extends Loader<object, any>>(
     loader: Loader<TData, TUrl>,
-    url: TUrl,
+    url: LoaderUrl<TLoader>,
     warn?: boolean,
-  ): Promise<TData> | TData | undefined
+  ): PromiseMaybe<LoaderData<TLoader>> | undefined
 }
 ```
 
 </details>
-
-**Working with the Default Cache:**
-
-`useLoader` comes with caching enabled by default using `LoaderCache`:
-
-```tsx
-import { useLoader } from "solid-three"
-
-// Resources are automatically cached
-const texture1 = useLoader(TextureLoader, "texture1.jpg") // Loaded and cached
-const texture2 = useLoader(TextureLoader, "texture1.jpg") // Returns cached version
-
-// Disable caching for specific resources
-const texture3 = useLoader(TextureLoader, "texture2.jpg", {
-  cache: false, // This resource won't be cached
-})
-
-// Use a different cache for specific calls
-import { LoaderCache } from "solid-three"
-
-const customCache = new LoaderCache()
-const texture4 = useLoader(TextureLoader, "texture3.jpg", {
-  cache: customCache, // Uses custom cache instead of global
-})
-
-// Replace or disable the global cache
-useLoader.cache = new LoaderCache() // Replace with new instance
-useLoader.cache = undefined // Disable global caching entirely
-```
-
-**Creating a simple custom cache:**
-
-```tsx
-import type { LoaderRegistry } from "solid-three"
-import type { Loader } from "three"
-
-class SimpleCache implements LoaderRegistry {
-  private cache = new Map<Loader<any, any>, Map<string, any>>()
-
-  set(loader: Loader<any, any>, url: string | string[], data: Promise<any>) {
-    let loaderCache = this.cache.get(loader)
-    if (!loaderCache) {
-      loaderCache = new Map()
-      this.cache.set(loader, loaderCache)
-    }
-    const key = Array.isArray(url) ? url.join(",") : url
-    loaderCache.set(key, data)
-  }
-
-  get(loader: Loader<any, any>, url: string | string[]) {
-    const loaderCache = this.cache.get(loader)
-    if (!loaderCache) return undefined
-
-    const key = Array.isArray(url) ? url.join(",") : url
-    return loaderCache.get(key)
-  }
-}
-
-// Use your custom cache
-const myCache = new SimpleCache()
-useLoader.cache = myCache
-
-// Or per-call
-const texture = useLoader(TextureLoader, url, { cache: myCache })
-```
-
-**Advanced Usage with Multiple Loaders:**
-
-```tsx
-import { useLoader } from "solid-three"
-import { TextureLoader, GLTFLoader, AudioLoader } from "three"
-
-// The default LoaderCache handles multiple loader types automatically
-const App = () => {
-  // These all use the same cache but different namespaces
-  const texture = useLoader(TextureLoader, "asset.jpg")
-  const model = useLoader(GLTFLoader, "asset.gltf")
-  const sound = useLoader(AudioLoader, "asset.mp3")
-
-  // Same path but different loader = different resource
-  const textureAsset = useLoader(TextureLoader, "shared-name")
-  const modelAsset = useLoader(GLTFLoader, "shared-name") // Different resource
-}
-```
 
 ### useProps
 
