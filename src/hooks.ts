@@ -8,12 +8,15 @@ import {
   useContext,
 } from "solid-js"
 import { type Loader } from "three"
-import {
-  getOrInsertLoaderRegistry,
-  LoaderCache,
-  type LoaderRegistry,
-} from "./data-structure/loader-cache.ts"
-import type { AccessorMaybe, Constructor, Context, FrameListener, LoaderUrl } from "./types.ts"
+import { LoaderCache, type LoaderRegistry } from "./data-structure/loader-cache.ts"
+import type {
+  AccessorMaybe,
+  Constructor,
+  Context,
+  FrameListener,
+  LoaderUrl,
+  PromiseMaybe,
+} from "./types.ts"
 import {
   awaitMapObject,
   isRecord,
@@ -199,17 +202,52 @@ export function useLoader<
     return loader
   })
 
-  function loadUrl(url: LoaderUrl<TLoader>) {
+  /**
+   * Gets a resource from cache or loads and caches it.
+   * @param registry The cache registry to use
+   * @param loader The Three.js loader instance
+   * @param input The URL(s) to load
+   * @returns Promise resolving to the loaded resource
+   * @internal
+   */
+  function getOrInsert<TLoader extends Loader<any, any>, TInput extends LoadInput<TLoader>>(
+    registry: LoaderRegistry,
+    loader: TLoader,
+    input: TInput,
+  ): PromiseMaybe<LoadOutput<TLoader, TInput>> {
+    if (isRecord(input)) {
+      return awaitMapObject(input, value => getOrInsert(registry, loader, value)) as Promise<
+        LoadOutput<TLoader, TInput>
+      >
+    } else {
+      const _input = input as LoaderUrl<TLoader>
+
+      const cachedPromise = registry.get(loader, _input, false)
+
+      if (cachedPromise) {
+        return cachedPromise
+      }
+
+      const promise = load(loader, input)
+      registry.set(loader, input, promise)
+
+      return promise as Promise<LoadOutput<TLoader, TInput>>
+    }
+  }
+
+  function loadUrl<TInput extends LoadInput<TLoader>>(
+    url: TInput,
+  ): Promise<LoadOutput<TLoader, TInput>> {
     if (config.cache === true) {
       if (!useLoader.cache) {
         return load(loader(), url)
       }
 
-      return getOrInsertLoaderRegistry(useLoader.cache, loader(), url)
+      return getOrInsert(useLoader.cache, loader(), url)
     }
 
     if (config.cache) {
-      return getOrInsertLoaderRegistry(config.cache, loader(), url)
+      return getOrInsert(config.cache, loader(), url)
     }
 
     return load(loader(), url)
@@ -221,17 +259,6 @@ export function useLoader<
       config.onBeforeLoad?.(loader)
 
       url = base ? resolveUrls(base, url) : url
-
-      if (isRecord(url)) {
-        const result = await awaitMapObject(url, async url => {
-          const resource = await loadUrl(url)
-          return resource
-        })
-
-        config.onLoad?.(result)
-
-        return result
-      }
 
       const result = await loadUrl(url)
 

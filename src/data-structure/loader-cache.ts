@@ -1,7 +1,7 @@
 import { getOwner, onCleanup } from "solid-js"
 import type { Loader } from "three"
-import type { LoaderUrl } from "../types.ts"
-import { load, type LoadOutput } from "../utils.ts"
+import type { LoaderData, LoaderUrl, PromiseMaybe } from "../types.ts"
+import { isRecord } from "../utils.ts"
 import { TreeRegistry } from "./tree-registry.ts"
 
 /**********************************************************************************/
@@ -20,10 +20,10 @@ export interface LoaderRegistry {
    * @param url The URL or path to the resource
    * @param data The resource promise or resolved data
    */
-  set<TData extends object, TUrl extends string | string[]>(
-    loader: Loader<TData, TUrl>,
-    url: TUrl,
-    data: Promise<TData>,
+  set<TLoader extends Loader<object, any>>(
+    loader: TLoader,
+    url: LoaderUrl<TLoader>,
+    data: PromiseMaybe<LoaderData<TLoader>>,
   ): void
 
   /**
@@ -32,41 +32,11 @@ export interface LoaderRegistry {
    * @param url The URL or path to the resource
    * @returns The resource promise, resolved data, or undefined if not found
    */
-  get<TData extends object, TUrl extends string | string[]>(
-    loader: Loader<TData, TUrl>,
-    url: TUrl,
+  get<TLoader extends Loader<object, any>>(
+    loader: TLoader,
+    url: LoaderUrl<TLoader>,
     warn?: boolean,
-  ): Promise<TData> | TData | undefined
-}
-
-/**********************************************************************************/
-/*                                                                                */
-/*                                      Utils                                     */
-/*                                                                                */
-/**********************************************************************************/
-
-/**
- * Gets a resource from cache or loads and caches it.
- * @param registry The cache registry to use
- * @param loader The Three.js loader instance
- * @param url The URL(s) to load
- * @returns Promise resolving to the loaded resource
- * @internal
- */
-export async function getOrInsertLoaderRegistry<
-  TLoader extends Loader<any, any>,
-  TInput extends LoaderUrl<TLoader> | Record<string, LoaderUrl<TLoader>>,
->(registry: LoaderRegistry, loader: TLoader, url: TInput): Promise<LoadOutput<TLoader, TInput>> {
-  const cachedPromise = registry.get(loader, url, false)
-
-  if (cachedPromise) {
-    return cachedPromise
-  }
-
-  const promise = load(loader, url)
-  registry.set(loader, url, promise)
-
-  return promise
+  ): PromiseMaybe<LoaderData<TLoader>> | undefined
 }
 
 /**********************************************************************************/
@@ -75,11 +45,21 @@ export async function getOrInsertLoaderRegistry<
 /*                                                                                */
 /**********************************************************************************/
 
+interface LoaderTreeRegistryMap extends Map<Loader<any, any>, any> {
+  get<TLoader extends Loader<object, any>>(loader: TLoader): LoaderTreeRegistry<TLoader> | undefined
+  set<TLoader extends Loader<object, any>>(loader: TLoader, data: LoaderTreeRegistry<TLoader>): this
+}
+
+interface LoaderTreeRegistry<TLoader extends Loader<object, any>> extends TreeRegistry<object> {
+  get(paths: LoaderUrl<TLoader>, warn?: boolean): CacheNode<TLoader>
+  set(paths: LoaderUrl<TLoader>, data: CacheNode<TLoader>): void
+}
+
 export class LoaderCache implements LoaderRegistry {
   /** Map of loader instances to their respective tree registries */
-  #registryMap = new Map<Loader<any, any>, TreeRegistry<CacheNode<object>>>()
+  #treeRegistryMap: LoaderTreeRegistryMap = new Map() as unknown as LoaderTreeRegistryMap
   /** Weak map for reverse lookup from data to cache nodes */
-  #dataMap = new WeakMap<object, CacheNode<object>>()
+  #dataMap = new WeakMap<object, CacheNode<Loader<any, any>>>()
 
   /** Set of resources that do not have active references and can be safely cleaned up. */
   freeList = new Set<object>()
@@ -90,12 +70,15 @@ export class LoaderCache implements LoaderRegistry {
    * @returns The tree registry for this loader
    * @private
    */
-  #registry<T extends object>(loader: Loader<T, any>) {
-    let registry = this.#registryMap.get(loader)
+  #registry<TLoader extends Loader<object, any>>(loader: TLoader) {
+    let registry = this.#treeRegistryMap.get(loader)
     if (!registry) {
-      this.#registryMap.set(loader, (registry = new TreeRegistry()))
+      this.#treeRegistryMap.set(
+        loader,
+        (registry = new TreeRegistry() as LoaderTreeRegistry<TLoader>),
+      )
     }
-    return registry as TreeRegistry<CacheNode<T>>
+    return registry
   }
 
   /**
@@ -104,7 +87,7 @@ export class LoaderCache implements LoaderRegistry {
    * @param options.force Force deletion even if not in free list
    * @private
    */
-  #delete(node: CacheNode<any>, { force }: { force?: boolean } = {}) {
+  #delete(node: CacheNode<Loader<any, any>>, { force }: { force?: boolean } = {}) {
     if (!force && !this.freeList.has(node.data)) {
       console.error(
         `Attempting to delete a non-freed resource. Use { force: true } if you are sure you want to dispose`,
@@ -143,18 +126,18 @@ export class LoaderCache implements LoaderRegistry {
   /**
    * Removes a resource from a specific loader's cache at the given path.
    * @param loader The Three.js loader instance
-   * @param path The URL or path to the resource
+   * @param url The URL or path to the resource
    * @param options.force Force deletion even if resource has active references
    */
-  delete<TData extends object, TUrl extends string | string[]>(
-    loader: Loader<TData, TUrl>,
-    path: TUrl,
+  delete<TLoader extends Loader<object, any>>(
+    loader: TLoader,
+    url: LoaderUrl<TLoader>,
     options?: { force?: boolean },
   ) {
-    const node = this.#registry(loader).get(path)
+    const node = this.#registry(loader)?.get(url)
 
     if (!node) {
-      console.error(`Error while deleting path ${path}. Could not find CacheNode.`)
+      console.error(`Error while deleting path ${url}. Could not find CacheNode.`)
       return
     }
 
@@ -165,19 +148,18 @@ export class LoaderCache implements LoaderRegistry {
    * Retrieves a resource from the cache and tracks its usage.
    * Automatically integrates with Solid.js cleanup for reference counting.
    * @param loader The Three.js loader instance
-   * @param path The URL or path to the resource
+   * @param url The URL or path to the resource
    * @returns The resource promise, resolved data, or undefined if not found
    */
-  get<TData extends object, TUrl extends string | string[]>(
-    loader: Loader<TData, TUrl>,
-    path: TUrl,
-    warn = true,
-  ) {
-    const node = this.#registry(loader).get(path, warn)
+  get<TLoader extends Loader<object, any>>(
+    loader: TLoader,
+    url: LoaderUrl<TLoader>,
+    warn?: boolean,
+  ): PromiseMaybe<LoaderData<TLoader>> | undefined {
+    const node = this.#registry(loader)?.get(url, warn)
 
     if (!node) return undefined
 
-    node.track()
     return node.data
   }
 
@@ -189,14 +171,14 @@ export class LoaderCache implements LoaderRegistry {
    * @param options.force Force update even if resource already exists
    * @returns The stored promise
    */
-  set<TData extends object, TUrl extends string | string[]>(
-    loader: Loader<TData, TUrl>,
-    path: TUrl,
-    data: Promise<TData>,
+  set<TLoader extends Loader<object, any>>(
+    loader: TLoader,
+    path: LoaderUrl<TLoader>,
+    data: PromiseMaybe<LoaderData<TLoader>>,
     options?: { force?: boolean },
   ) {
     const registry = this.#registry(loader)
-    let node = registry.get(path, false)
+    let node = registry?.get(path, false)
 
     if (node) {
       node.update(data, options)
@@ -215,11 +197,11 @@ export class LoaderCache implements LoaderRegistry {
  * @template T The type of Three.js resource (must be an object)
  * @internal
  */
-class CacheNode<T extends object> {
+class CacheNode<TLoader extends Loader<any, any>> {
   /** Reference count for this resource */
   count = 0
   /** The cached resource (promise or resolved value) */
-  data: Promise<T> | T
+  data: PromiseMaybe<LoaderData<TLoader>>
 
   /**
    * Creates a new cache node.
@@ -230,9 +212,9 @@ class CacheNode<T extends object> {
    */
   constructor(
     public free: Set<object>,
-    public registry: TreeRegistry<CacheNode<T>>,
-    public path: string | string[],
-    promise: Promise<T>,
+    public registry: LoaderTreeRegistry<TLoader>,
+    public path: LoaderUrl<TLoader>,
+    promise: PromiseMaybe<LoaderData<TLoader>>,
   ) {
     this.data = promise
     this.#set(promise)
@@ -243,9 +225,9 @@ class CacheNode<T extends object> {
    * @param promise The resource promise
    * @private
    */
-  #set(promise: Promise<T>) {
+  #set(promise: PromiseMaybe<LoaderData<TLoader>>) {
     this.data = promise
-    promise.then(value => {
+    Promise.resolve(promise).then(value => {
       // Update data to resolved promise, if it hasn't been updated before
       if (this.data === promise) {
         this.data = value
@@ -258,8 +240,8 @@ class CacheNode<T extends object> {
    * @private
    */
   #dispose() {
-    if ("dispose" in this.data && typeof this.data.dispose === "function") {
-      this.data.dispose?.()
+    if (isRecord(this.data) && "dispose" in this.data && typeof this.data.dispose === "function") {
+      this.data.dispose()
     }
   }
 
@@ -302,7 +284,7 @@ class CacheNode<T extends object> {
    * @param data The new resource promise
    * @param options.force Force update and dispose current resource (default: true)
    */
-  update(data: Promise<T>, { force = true }: { force?: boolean } = {}) {
+  update(data: PromiseMaybe<LoaderData<TLoader>>, { force = true }: { force?: boolean } = {}) {
     if (this.data !== data && !force) {
       console.error(
         "Attempted to update already set resource. To overwrite and dispose of current resource, use { force: true } instead.",

@@ -101,7 +101,7 @@ export class TreeRegistry<T> implements TreeBase<T> {
       return undefined
     }
 
-    return node?.data
+    return node.data
   }
 
   /**

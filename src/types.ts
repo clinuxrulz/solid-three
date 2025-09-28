@@ -32,6 +32,7 @@ import type { Measure } from "./utils/use-measure.ts"
 /**********************************************************************************/
 
 export type AccessorMaybe<T> = T | Accessor<T>
+export type PromiseMaybe<T> = T | Promise<T>
 
 /** Generic constructor. Returns instance of given type. Defaults to any. */
 export type Constructor<T = any> = new (...args: any[]) => T
