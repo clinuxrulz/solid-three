@@ -22,25 +22,26 @@
    - [T](#t)
    - [Entity](#entity)
    - [Portal](#portal)
+   - [Resource](#resource)
 4. [Hooks](#hooks)
    - [useThree](#usethree)
    - [useFrame](#useframe)
-   - [useLoader](#useloader)
    - [useProps](#useprops)
 5. [Utilities](#utilities)
+   - [Raycasters](#raycasters)
    - [autodispose](#autodispose)
+   - [Metadata Utilities](#metadata-utilities)
+   - [Testing Utilities](#testing-utilities)
 6. [Event Handling](#event-handling)
-   - [Controlling Raycasting with pointerEvents](#controlling-raycasting-with-pointerevents)
+   - [Controlling Raycasting with raycastable](#controlling-raycasting-with-raycastable)
    - [Supported Events](#supported-events)
    - [Event Object](#event-object)
    - [Event Propagation](#event-propagation)
    - [Missed Events](#missed-events)
    - [Hover Events](#hover-events)
-7. [TypeScript Support](#typescript-support)
-8. [Performance Optimization](#performance-optimization)
-9. [Differences from React-Three-Fiber](#differences-from-react-three-fiber)
-10. [Contributing](#contributing)
-11. [License](#license)
+7. [Performance Optimization](#performance-optimization)
+8. [Contributing](#contributing)
+9. [License](#license)
 
 ## Installation
 
@@ -149,23 +150,47 @@ The `Canvas` component initializes the `three.js` rendering context and acts as 
 
 **Props:**
 
-- **camera** (`Partial<PerspectiveCamera | OrthographicCamera> | Camera`): Configures the camera used in the scene. Can be partial props for a camera or an existing Camera instance.
-- **fallback** (`JSX.Element`): Element to render while the main content is loading asynchronously.
-- **gl** (`Partial<WebGLRenderer> | ((canvas: HTMLCanvasElement) => WebGLRenderer) | WebGLRenderer`): Defines options for the WebGLRenderer, a function returning a customized renderer, or an existing renderer instance.
-- **scene** (`Partial<Scene> | Scene`): Provides custom settings for the Scene instance or an existing Scene.
-- **raycaster** (`Partial<Raycaster> | Raycaster`): Configures the Raycaster for mouse and pointer events.
-- **shadows** (`boolean | "basic" | "percentage" | "soft" | "variance" | WebGLRenderer["shadowMap"]`): Enables and configures shadows in the scene with various shadow mapping techniques.
-- **orthographic** (`boolean`): Toggles between Orthographic and Perspective camera.
-- **linear** (`boolean`): Toggles linear interpolation for texture filtering.
-- **flat** (`boolean`): Toggles flat interpolation for texture filtering.
-- **frameloop** (`"never" | "demand" | "always"`): Controls the rendering loop's operation mode:
+- **defaultCamera**: Configures the camera used in the scene. Can be partial props for a camera or an existing Camera instance.
+- **fallback**: Element to render while the main content is loading asynchronously.
+- **gl**: Defines options for the WebGLRenderer, a function returning a customized renderer, or an existing renderer instance.
+- **scene**: Provides custom settings for the Scene instance or an existing Scene.
+- **defaultRaycaster**: Configures the Raycaster for mouse and pointer events.
+- **shadows**: Enables and configures shadows in the scene with various shadow mapping techniques.
+- **orthographic**: Toggles between Orthographic and Perspective camera for the default camera.
+- **linear**: Toggles linear interpolation for texture filtering.
+- **flat**: Toggles flat interpolation for texture filtering.
+- **frameloop**: Controls the rendering loop's operation mode:
   - `"always"`: Renders continuously on every frame
   - `"demand"`: Renders only when explicitly requested
   - `"never"`: Disables automatic rendering
-- **style** (`JSX.CSSProperties`): Custom CSS styles for the canvas container.
+- **style**: Custom CSS styles for the canvas container.
+- **class**: CSS class names for the canvas container.
 - **Event handlers**: All event handlers are supported on the Canvas component, allowing you to handle events that bubble through the entire scene (e.g., `onClick`, `onPointerMove`, `onClickMissed`, etc.)
 
-Example with all props:
+<details>
+<summary>Typescript Interface</summary>
+
+```tsx
+interface CanvasProps {
+  defaultCamera?: Partial<PerspectiveCamera | OrthographicCamera> | Camera
+  fallback?: JSX.Element
+  gl?: Partial<WebGLRenderer> | ((canvas: HTMLCanvasElement) => WebGLRenderer) | WebGLRenderer
+  scene?: Partial<Scene> | Scene
+  defaultRaycaster?: Partial<Raycaster> | Raycaster
+  shadows?: boolean | "basic" | "percentage" | "soft" | "variance" | WebGLRenderer["shadowMap"]
+  orthographic?: boolean
+  linear?: boolean
+  flat?: boolean
+  frameloop?: "never" | "demand" | "always"
+  style?: JSX.CSSProperties
+  class?: string
+  // Plus all event handlers
+}
+```
+
+</details>
+
+**Example with all props:**
 
 ```tsx
 <Canvas
@@ -283,9 +308,22 @@ function Instance() {
 
 **Props:**
 
-- **from** (`Constructor | Instance`): Either a three.js constructor (class) or an existing instance
-- **args** (`ConstructorParameters`): Arguments to pass to the constructor when using a class
+- **from**: Either a three.js constructor (class) or an existing instance
+- **args**: Arguments to pass to the constructor when using a class
 - All other props supported by the three.js object
+
+<details>
+<summary>Typescript Interface</summary>
+
+```tsx
+interface EntityProps {
+  from: Constructor | Instance
+  args?: ConstructorParameters
+  // Plus all THREE.js object props
+}
+```
+
+</details>
 
 #### Manual disposal of instance-entities
 
@@ -322,8 +360,20 @@ The `Portal` component allows you to place children outside the regular scene gr
 
 **Props:**
 
-- **element** (`Object3D | S3.Instance<Object3D>`): Optional `three.js` object to render into. If not provided, renders into the root scene.
-- **children** (`JSX.Element`): Elements to render in the portal.
+- **element**: Optional `three.js` object to render into. If not provided, renders into the root scene.
+- **children**: Elements to render in the portal.
+
+<details>
+<summary>Typescript Interface</summary>
+
+```tsx
+type PortalProps<T extends Object3D> = ParentProps<{
+  element?: T | Meta<T>
+  onUpdate?(value: T): void
+}>
+```
+
+</details>
 
 Example:
 
@@ -353,6 +403,37 @@ const App = () => {
 }
 ```
 
+### Resource
+
+Declarative component for loading Three.js resources with automatic caching and Suspense integration. When no children are provided, the loaded resource is automatically rendered with any additional props passed through.
+
+**Props:**
+- `loader` - Three.js loader constructor (e.g., `TextureLoader`, `GLTFLoader`)
+- `url` - URL(s) to load (string, array, or object)
+- `children` - Optional render function
+- `*` - Additional props are passed to the loaded resource
+
+**Examples:**
+
+```tsx
+// Automatic attachment with the attach prop
+<T.MeshStandardMaterial>
+  <Resource loader={TextureLoader} url="diffuse.jpg" attach="map" />
+  <Resource loader={TextureLoader} url="normal.jpg" attach="normalMap" />
+</T.MeshStandardMaterial>
+
+// Automatic model rendering with transform props
+<Resource loader={GLTFLoader} url="model.gltf" scale={2} position={[0, 1, 0]} />
+
+// Custom rendering with children function
+<Resource loader={TextureLoader} url="texture.jpg">
+  {texture => <T.MeshBasicMaterial map={texture()} />}
+</Resource>
+
+// Disable caching for specific resources
+<Resource loader={TextureLoader} url="dynamic.jpg" cache={false} />
+```
+
 ## Hooks
 
 ### useThree
@@ -361,44 +442,107 @@ Provides access to the `three.js` context, including the renderer, scene, camera
 
 **Returns:**
 
-- **camera** (`Camera`): The active camera (PerspectiveCamera or OrthographicCamera).
-- **gl** (`WebGLRenderer`): The WebGL renderer instance.
-- **scene** (`Scene`): The root scene.
-- **raycaster** (`Raycaster`): The raycaster used for pointer events.
+- **bounds** (`Measure`): Reactive canvas bounds measurement.
+- **camera** (`Camera`): The current camera.
+- **setCamera** (`(camera: Camera) => () => void`): A setter-function for setting the current camera.
 - **canvas** (`HTMLCanvasElement`): The canvas DOM element.
 - **clock** (`Clock`): The `three.js` clock for timing.
-- **pointer** (`Vector2`): Current normalized pointer coordinates (-1 to 1).
-- **setPointer** (`Setter<Vector2>`): Function to update pointer coordinates.
+- **dpr** (`number`): Device pixel ratio.
+- **gl** (`WebGLRenderer`): The WebGL renderer instance.
+- **raycaster** (`Raycaster`): The current raycaster used for pointer events.
+- **setRaycaster** (`(raycaster: Raycaster) => () => void`): A setter-function for setting the current raycaster.
 - **render** (`(delta: number) => void`): Function to manually trigger a render.
 - **requestRender** (`() => void`): Function to request a render on the next frame.
+- **scene** (`Scene`): The root scene.
 - **xr** (`{ connect: () => void; disconnect: () => void }`): WebXR connection management.
-- **bounds** (`Measure`): Reactive canvas bounds measurement.
+
+**Camera and Raycaster Stack System:**
+
+`solid-three` implements a stack-based system for managing its current camera and raycaster:
+
+- **Stack-based Management**: Both cameras and raycasters are managed as stacks internally
+- **Default at Tail**: The `defaultCamera` and `defaultRaycaster` from Canvas props form the tail of their respective stacks
+- **Current Active Camera at Head**: The camera/raycaster at the top of the stack is the currently active camera/raycaster
+- **Push To The Stack To Become Active**: By calling `setCamera(camera)` and `setRaycaster(raycaster)`, the camera/raycaster is pushed to the stack. This causes it to become the currently active camera/raycaster
+- **Easily Pop From The Stack**: `setCamera(camera)` and `setRaycaster(raycaster)` return a function to pop the camera/raycaster from the stack. If the camera/raycaster was on top of the stack, the previous camera/raycaster in the stack becomes active again
 
 **Usage:**
 
 ```tsx
-// Get the entire context
 const three = useThree()
 
-createEffect(() => console.log(three.camera))
-setInterval(() => three.requestRender(), 1_000)
+// Push a new camera onto the stack
+const restoreCamera = three.setCamera(myCustomCamera)
+
+// The custom camera is now active
+// When done, call the cleanup to restore previous camera
+restoreCamera()
+
+// Example with automatic cleanup
+createEffect(() => {
+  const customCamera = new OrthographicCamera(/* ... */)
+  const restore = three.setCamera(customCamera)
+
+  onCleanup(restore) // Automatically restore previous camera when effect re-runs or unmounts
+})
+```
+
+**Practical Example - Camera Switching:**
+
+```tsx
+const CameraController = () => {
+  const three = useThree()
+  const [useOrtho, setUseOrtho] = createSignal(false)
+
+  createEffect(() => {
+    if (useOrtho()) {
+      const orthoCamera = new OrthographicCamera(-5, 5, 5, -5, 0.1, 1000)
+      orthoCamera.position.set(0, 0, 5)
+
+      // Push ortho camera onto stack
+      const restore = three.setCamera(orthoCamera)
+
+      // Cleanup automatically restores previous camera
+      onCleanup(restore)
+    }
+  })
+
+  return <button onClick={() => setUseOrtho(v => !v)}>Toggle Orthographic Camera</button>
+}
 ```
 
 ### useFrame
 
 Registers a callback that will be called before every frame is rendered, useful for animations and updates.
 
-**Signature:**
-
-```tsx
-useFrame((context: Context, delta: number, frame?: XRFrame) => void)
-```
-
 **Parameters:**
 
-- **context** - The three.js context object (same as `useThree()`)
-- **delta** - Time elapsed since last frame in seconds
-- **frame** - Optional XRFrame for WebXR sessions
+- **callback** - Function called each frame with:
+  - **context** - The three.js context object (same as `useThree()`)
+  - **delta** - Time elapsed since last frame in seconds
+  - **frame** - Optional XRFrame for WebXR sessions
+- **options** - Optional configuration object:
+  - **priority** - Execution priority (lower numbers run first, default: 0)
+  - **stage** - Whether to run before or after rendering (default: "before")
+
+<details>
+<summary>Typescript Interface</summary>
+
+```tsx
+useFrame(
+  callback: (context: Context, delta: number, frame?: XRFrame) => void,
+  options?: FrameListenerOptions
+)
+
+interface FrameListenerOptions {
+  priority?: number
+  stage?: "before" | "after"
+}
+```
+
+</details>
+
+**Basic usage:**
 
 ```tsx
 const RotatingMesh = () => {
@@ -417,75 +561,359 @@ const RotatingMesh = () => {
 }
 ```
 
+**With options:**
+
+```tsx
+const AnimatedMesh = () => {
+  let mesh: THREE.Mesh = null!
+
+  // Run with high priority before render
+  useFrame(
+    (context, delta) => {
+      mesh.position.x = Math.sin(context.clock.elapsedTime) * 2
+    },
+    { priority: -1 },
+  )
+
+  // Run after render with lower priority
+  useFrame(
+    (context, delta) => {
+      console.log("Frame rendered")
+    },
+    { stage: "after", priority: 10 },
+  )
+
+  return <T.Mesh ref={mesh} />
+}
+```
+
 ### useLoader
 
 Manages asynchronous resource loading, such as textures or models, and integrates with `solid-js`' reactivity system. This hook can be used with Solid's `<Suspense>` to handle loading states.
 
-**Signature:**
+**Caching Behavior:**
+
+By default, `useLoader` automatically caches resources using the built-in [`LoaderCache`](#loadercache) implementation. This means:
+
+- Resources are only loaded once and shared across components
+- Automatic reference counting tracks resource usage
+- Resources are added to a freelist when not referenced
+- Each loader type maintains its own isolated namespace
+
+You can customize caching behavior:
+
+1. **Disable caching**: Pass `cache: false` in options for specific resources
+2. **Custom cache**: Pass your own `LoaderRegistry` implementation in options
+3. **Replace global cache**: Set `useLoader.cache` to your own implementation or `undefined` to disable
+
+**Usage:**
 
 ```tsx
-function useLoader<TLoader, TArgs>(
-  Constructor: new (...args: any[]) => TLoader,
-  args: Accessor<TArgs>, // Must be an Accessor
-  setup?: (loader: TLoader) => void, // Optional setup function
-)
+// Load a single resource
+const texture = useLoader(TextureLoader, url)
+const gltf = useLoader(GLTFLoader, "model.gltf")
+
+// Load multiple resources (with object keys)
+const textures = useLoader(TextureLoader, {
+  diffuse: "wood-diffuse.jpg",
+  normal: "wood-normal.jpg",
+})
+
+// Reactive URLs (can be signals or getters)
+const [url, setUrl] = createSignal("texture.jpg")
+const texture = useLoader(TextureLoader, url)
 ```
 
-#### Single Texture
+**Options:**
+
+- **base**: Base URL for resolving relative paths
+- **cache**: `true` to use global cache, `LoaderRegistry` instance for custom cache, or `false` to disable
+- **onBeforeLoad**: Callback before loading starts (e.g., to set loader properties)
+- **onLoad**: Callback after resource loads successfully
+
+<details>
+<summary>Typescript Interface</summary>
 
 ```tsx
-import { createSignal } from "solid-js"
-import { Canvas, useLoader } from "solid-three"
+interface UseLoaderOptions<TLoader, TResult> {
+  base?: string
+  cache?: true | LoaderRegistry | false
+  onBeforeLoad?(loader: TLoader): void
+  onLoad?(resource: TResult): void
+}
+```
+
+</details>
+
+#### Single Resource Loading
+
+```tsx
+import { createSignal, Suspense } from "solid-js"
+import { Canvas, useLoader, createT } from "solid-three"
 import { TextureLoader } from "three"
+import * as THREE from "three"
+
+const T = createT({
+  Mesh: THREE.Mesh,
+  SphereGeometry: THREE.SphereGeometry,
+  MeshBasicMaterial: THREE.MeshBasicMaterial,
+})
 
 const TexturedSphere = () => {
   const [url, setUrl] = createSignal("path/to/texture.jpg")
-  const texture = useLoader(TextureLoader, url, loader => (loader.crossOrigin = "anonymous"))
+  const texture = useLoader(TextureLoader, url)
 
   return (
     <T.Mesh onClick={() => setUrl("path/to/other/texture.jpg")}>
-      <T.SphereGeometry args={[5, 32, 32]} />
+      <T.SphereGeometry args={[1, 32, 32]} />
       <T.MeshBasicMaterial map={texture()} />
     </T.Mesh>
   )
 }
 
-export const App = () => {
+const App = () => {
   return (
     <Canvas>
-      <TexturedSphere />
+      <Suspense fallback={<div>Loading...</div>}>
+        <TexturedSphere />
+      </Suspense>
     </Canvas>
   )
 }
 ```
 
-### Multiple textures
+#### Multiple Resource Loading
 
 ```tsx
-import { Canvas, useLoader } from "solid-three"
+import { For, Suspense } from "solid-js"
+import { Canvas, useLoader, createT } from "solid-three"
 import { TextureLoader } from "three"
+import * as THREE from "three"
+
+const T = createT({
+  Mesh: THREE.Mesh,
+  PlaneGeometry: THREE.PlaneGeometry,
+  MeshBasicMaterial: THREE.MeshBasicMaterial,
+})
 
 const TexturedPlanes = () => {
-  const textures = useLoader(TextureLoader, () => ["/textures/wood.jpg", "/textures/metal.jpg"])
+  const textures = useLoader(TextureLoader, {
+    wood: "/textures/wood.jpg",
+    metal: "/textures/metal.jpg",
+  })
 
   return (
-    <For each={textures()}>
-      {(texture, index) => (
-        <T.Mesh position={[index() * 6, 0, 0]}>
-          <T.PlaneGeometry args={[5, 5]} />
-          <T.MeshBasicMaterial map={texture} />
-        </T.Mesh>
-      )}
-    </For>
+    <>
+      <T.Mesh position={[0, 0, 0]}>
+        <T.PlaneGeometry args={[2, 2]} />
+        <T.MeshBasicMaterial map={textures()?.wood} />
+      </T.Mesh>
+      <T.Mesh position={[0, 0, 0]}>
+        <T.PlaneGeometry args={[2, 2]} />
+        <T.MeshBasicMaterial map={textures()?.metal} />
+      </T.Mesh>
+    </>
   )
 }
 
-export const App = () => {
+const App = () => {
   return (
     <Canvas>
-      <TexturedPlanes />
+      <Suspense>
+        <TexturedPlanes />
+      </Suspense>
     </Canvas>
   )
+}
+```
+
+#### Caching
+
+`solid-three` provides the `LoaderCache` class for caching, but you can also implement your own cache by conforming to the `LoaderRegistry` interface.
+
+A cache registry needs two methods:
+
+- **set**: Store a resource promise for a given loader and URL
+- **get**: Retrieve a resource for a given loader and URL (returns either the promise or resolved value)
+
+<details>
+<summary>Typescript Interface</summary>
+
+```tsx
+interface LoaderRegistry {
+  set<TData extends object, TUrl extends string | string[]>(
+    loader: Loader<TData, TUrl>,
+    url: TUrl,
+    data: Promise<TData>,
+  ): void
+
+  get<TData extends object, TUrl extends string | string[]>(
+    loader: Loader<TData, TUrl>,
+    url: TUrl,
+    warn?: boolean,
+  ): Promise<TData> | TData | undefined
+}
+```
+
+</details>
+
+**Working with the Default Cache:**
+
+`useLoader` comes with caching enabled by default using `LoaderCache`:
+
+```tsx
+import { useLoader } from "solid-three"
+
+// Resources are automatically cached
+const texture1 = useLoader(TextureLoader, "texture1.jpg") // Loaded and cached
+const texture2 = useLoader(TextureLoader, "texture1.jpg") // Returns cached version
+
+// Disable caching for specific resources
+const texture3 = useLoader(TextureLoader, "texture2.jpg", {
+  cache: false, // This resource won't be cached
+})
+
+// Use a different cache for specific calls
+import { LoaderCache } from "solid-three"
+
+const customCache = new LoaderCache()
+const texture4 = useLoader(TextureLoader, "texture3.jpg", {
+  cache: customCache, // Uses custom cache instead of global
+})
+
+// Replace or disable the global cache
+useLoader.cache = new LoaderCache() // Replace with new instance
+useLoader.cache = undefined // Disable global caching entirely
+```
+
+**Creating a simple custom cache:**
+
+```tsx
+import type { LoaderRegistry } from "solid-three"
+import type { Loader } from "three"
+
+class SimpleCache implements LoaderRegistry {
+  private cache = new Map<Loader<any, any>, Map<string, any>>()
+
+  set(loader: Loader<any, any>, url: string | string[], data: Promise<any>) {
+    let loaderCache = this.cache.get(loader)
+    if (!loaderCache) {
+      loaderCache = new Map()
+      this.cache.set(loader, loaderCache)
+    }
+    const key = Array.isArray(url) ? url.join(",") : url
+    loaderCache.set(key, data)
+  }
+
+  get(loader: Loader<any, any>, url: string | string[]) {
+    const loaderCache = this.cache.get(loader)
+    if (!loaderCache) return undefined
+
+    const key = Array.isArray(url) ? url.join(",") : url
+    return loaderCache.get(key)
+  }
+}
+
+// Use your custom cache
+const myCache = new SimpleCache()
+useLoader.cache = myCache
+
+// Or per-call
+const texture = useLoader(TextureLoader, url, { cache: myCache })
+```
+
+### LoaderCache
+
+`LoaderCache` is the built-in implementation of the `LoaderRegistry` interface that `solid-three` exports. It's automatically set as the default cache for `useLoader`, providing a sophisticated caching system with automatic memory management for Three.js loader resources.
+
+**Features:**
+
+- **Automatic Reference Counting**: Tracks how many components are using each resource
+- **Solid.js Integration**: Automatically decrements reference counts when components unmount
+- **Deferred Disposal**: Resources are added to a "free list" when no longer referenced
+- **Memory Management**: Call `emptyFreeList()` to dispose of unused resources
+- **Multi-Loader Support**: Each Three.js loader gets its own isolated cache namespace
+- **Path-based Storage**: Hierarchical storage using paths for efficient lookups
+
+**Basic Usage:**
+
+```tsx
+import { LoaderCache } from "solid-three"
+
+// Create a cache instance
+const cache = new LoaderCache()
+
+// Store a resource
+const texturePromise = textureLoader.loadAsync("wood.jpg")
+cache.set(textureLoader, "wood.jpg", texturePromise)
+
+// Retrieve a resource (automatically tracked in reactive contexts)
+const texture = cache.get(textureLoader, "wood.jpg")
+```
+
+**Memory Management:**
+
+```tsx
+const cache = new LoaderCache()
+
+// Resources with zero references are added to the free list
+// They are not immediately disposed to allow for re-use
+
+// Periodically clean up unused resources
+setInterval(() => {
+  cache.emptyFreeList()
+}, 60000) // Every minute
+
+// Force delete a specific resource
+cache.deleteResource(texture, { force: true })
+
+// Delete by loader and path
+cache.delete(textureLoader, "wood.jpg", { force: true })
+```
+
+**Reference Counting Example:**
+
+```tsx
+const TexturedBox = () => {
+  // This increments the reference count for 'texture.jpg'
+  const texture = useLoader(TextureLoader, "texture.jpg")
+
+  // When this component unmounts, the reference count decreases
+  // If it reaches zero, the texture is added to the free list
+  return (
+    <T.Mesh>
+      <T.BoxGeometry />
+      <T.MeshBasicMaterial map={texture()} />
+    </T.Mesh>
+  )
+}
+
+// Multiple components can share the same cached resource
+const Scene = () => (
+  <>
+    <TexturedBox /> {/* ref count: 1 */}
+    <TexturedBox /> {/* ref count: 2 */}
+    <TexturedBox /> {/* ref count: 3 */}
+  </>
+)
+```
+
+**Advanced Usage with Multiple Loaders:**
+
+```tsx
+import { useLoader } from "solid-three"
+import { TextureLoader, GLTFLoader, AudioLoader } from "three"
+
+// The default LoaderCache handles multiple loader types automatically
+const App = () => {
+  // These all use the same cache but different namespaces
+  const texture = useLoader(TextureLoader, "asset.jpg")
+  const model = useLoader(GLTFLoader, "asset.gltf")
+  const sound = useLoader(AudioLoader, "asset.mp3")
+
+  // Same path but different loader = different resource
+  const textureAsset = useLoader(TextureLoader, "shared-name")
+  const modelAsset = useLoader(GLTFLoader, "shared-name") // Different resource
 }
 ```
 
@@ -493,16 +921,19 @@ export const App = () => {
 
 The `useProps` hook manages and applies `solid-three` props to THREE.js objects. It sets up reactive effects to ensure properties are correctly applied and updated, manages children attachment, and handles automatic disposal.
 
-**Signature:**
+**Parameters:**
+
+- **object**: An accessor function that returns the target THREE.js object
+- **props**: Object containing props to apply (including `ref`, `children`, and THREE.js properties)
+
+<details>
+<summary>Typescript Signature</summary>
 
 ```tsx
 function useProps<T extends object>(object: Accessor<T>, props: any): void
 ```
 
-**Parameters:**
-
-- **object** (`Accessor<T>`): An accessor function that returns the target THREE.js object
-- **props** (`any`): Object containing props to apply (including `ref`, `children`, and THREE.js properties)
+</details>
 
 **Usage:**
 
@@ -559,6 +990,102 @@ export function OrbitControls(props: S3.Props<typeof ThreeOrbitControls>) {
 
 ## Utilities
 
+### Raycasters
+
+`solid-three` provides custom raycaster implementations that handle pointer tracking internally. All raycasters extend THREE.Raycaster and implement the `EventRaycaster` interface.
+
+The interface adds one method to the standard THREE.Raycaster:
+
+- **update**: Called automatically before intersection testing to update the raycaster's position based on the event
+
+<details>
+<summary>Typescript Interface</summary>
+
+```tsx
+interface EventRaycaster extends THREE.Raycaster {
+  update(event: PointerEvent | MouseEvent | WheelEvent, context: Context): void
+}
+```
+
+</details>
+
+**When `update()` is called:**
+
+The `update()` method is automatically called by `solid-three`'s event system whenever:
+
+- **Mouse events**: `click`, `mousedown`, `mouseup`, `mousemove`, `contextmenu`, `dblclick`
+- **Pointer events**: `pointerdown`, `pointerup`, `pointermove`
+- **Wheel events**: `wheel`
+
+This happens before intersection testing, ensuring the raycaster is properly positioned for accurate 3D object detection.
+
+#### CursorRaycaster
+
+The default raycaster that tracks the cursor position:
+
+```tsx
+import { Canvas } from "solid-three"
+import { CursorRaycaster } from "solid-three"
+
+const App = () => {
+  const raycaster = new CursorRaycaster()
+
+  // CursorRaycaster is used by default, but you can explicitly set it:
+  return <Canvas defaultRaycaster={raycaster}>{/* Your scene */}</Canvas>
+}
+```
+
+#### CenterRaycaster
+
+A raycaster that always casts from the center of the screen:
+
+```tsx
+import { Canvas } from "solid-three"
+import { CenterRaycaster } from "solid-three"
+
+const App = () => {
+  const raycaster = new CenterRaycaster()
+
+  return <Canvas defaultRaycaster={raycaster}>>{/* Your scene */}</Canvas>
+}
+```
+
+#### Creating Your Own Raycaster
+
+You can create custom raycasters by extending THREE.Raycaster and (optionally) implementing the `EventRaycaster` interface:
+
+```tsx
+import { Raycaster, Vector2 } from "three"
+import type { EventRaycaster, Context } from "solid-three"
+
+class CustomRaycaster extends Raycaster implements EventRaycaster {
+  constructor() {
+    super()
+    // Initialize your custom raycaster
+  }
+
+  update(event: PointerEvent | MouseEvent | WheelEvent, context: Context) {
+    const pointer = new Vector2()
+
+    // Calculate normalized device coordinates based on your custom logic
+
+    // Example: Apply custom transformation to pointer coordinates
+    pointer.x = ((event.offsetX / context.bounds.width) * 2 - 1) * 0.5 // Scale down horizontal movement
+    pointer.y = (-(event.offsetY / context.bounds.height) * 2 + 1) * 0.5 // Scale down vertical movement
+
+    // Update the raycaster with the transformed coordinates
+    this.setFromCamera(pointer, context.camera)
+  }
+}
+
+// Usage
+const App = () => {
+  const raycaster = new CustomRaycaster()
+
+  return <Canvas defaultRaycaster={raycaster}>{/* Your scene */}</Canvas>
+}
+```
+
 ### autodispose
 
 The `autodispose` utility ensures that three.js objects are properly disposed on cleanup.
@@ -596,6 +1123,48 @@ function ConditionalMesh() {
     <Show when={visible()}>
       <Entity from={new Mesh(geometry, material)} />
     </Show>
+  )
+}
+```
+
+### Metadata Utilities
+
+These utilities help manage metadata associated with THREE.js objects:
+
+- **getMeta(object)**: Get metadata associated with a THREE.js object
+- **hasMeta(object)**: Check if an object has metadata
+- **meta**: WeakMap storing object metadata
+- **$S3C**: Symbol used internally for component metadata
+
+```tsx
+import { getMeta, hasMeta } from "solid-three"
+
+// Check if an object has solid-three metadata
+if (hasMeta(mesh)) {
+  const metadata = getMeta(mesh)
+  console.log(metadata)
+}
+```
+
+### Testing Utilities
+
+Available from `"solid-three/testing"`:
+
+- **TestCanvas**: A lightweight Canvas component for testing
+- **test**: Testing utilities for solid-three components
+
+```tsx
+import { TestCanvas, test } from "solid-three/testing"
+
+// Use TestCanvas in your tests for a minimal three.js environment
+const MyTest = () => {
+  return (
+    <TestCanvas>
+      <T.Mesh>
+        <T.BoxGeometry />
+        <T.MeshBasicMaterial />
+      </T.Mesh>
+    </TestCanvas>
   )
 }
 ```
@@ -644,16 +1213,22 @@ const RaycastableMesh = () => {
 
 Event handlers receive an event object with the following properties:
 
+- **nativeEvent**: The original DOM event
+- **stopped**: Whether propagation has been stopped (only for stoppable events)
+- **stopPropagation**: Method to stop event propagation (only for stoppable events)
+
+<details>
+<summary>Typescript Interface</summary>
+
 ```tsx
 interface Event<T> {
-  // Original DOM event
   nativeEvent: T
-
-  // Event control (only for stoppable events)
-  stopped?: boolean // Whether propagation has been stopped
-  stopPropagation?: () => void // Stop event propagation
+  stopped?: boolean
+  stopPropagation?: () => void
 }
 ```
+
+</details>
 
 ### Event Propagation
 
@@ -715,9 +1290,9 @@ Not all events in solid-three can be stopped with `stopPropagation()`. This desi
 
 **Non-stoppable events:**
 
-- `onClickMissed`, `onDoubleClickMissed`, `onContextMenuMissed` - [Missed events](#missed-events) always fire for all registered handlers
-- `onMouseEnter`, `onPointerEnter` - Enter events always fire to maintain consistent hover state ([hover events](#hover-events-entermoveleave))
-- `onMouseLeave`, `onPointerLeave` - Leave events always fire to ensure proper cleanup ([hover events](#hover-events-entermoveleave))
+- `onClickMissed`, `onDoubleClickMissed`, `onContextMenuMissed` - [Missed Events](#missed-events) always fire for all registered handlers
+- `onMouseEnter`, `onPointerEnter` - Enter events always fire [Hover Events](#hover-events-entermoveleave)
+- `onMouseLeave`, `onPointerLeave` - Leave events always fire [Hover Events](#hover-events-entermoveleave)
 
 **Stoppable events:**
 

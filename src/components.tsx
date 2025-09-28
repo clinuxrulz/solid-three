@@ -1,21 +1,20 @@
 import { whenMemo } from "@bigmistqke/solid-whenever"
 import {
+  Show,
+  createMemo,
+  mergeProps,
+  splitProps,
   type Accessor,
   type JSX,
   type JSXElement,
   type ParentProps,
-  Show,
-  createMemo,
-  createResource,
-  mergeProps,
-  splitProps,
 } from "solid-js"
 import { Loader, Object3D } from "three"
-import { threeContext, useThree } from "./hooks.ts"
+import { threeContext, useLoader, useThree, type UseLoaderOptions } from "./hooks.ts"
 import { useProps } from "./props.ts"
-import type { Constructor, Meta, Overwrite, Props } from "./types.ts"
+import type { Constructor, LoaderData, LoaderUrl, Meta, Overwrite, Props } from "./types.ts"
 import { type InstanceOf } from "./types.ts"
-import { autodispose, hasMeta, isConstructor, load, meta, withContext } from "./utils.ts"
+import { autodispose, hasMeta, isConstructor, meta, withContext, type LoadOutput } from "./utils.ts"
 
 /**********************************************************************************/
 /*                                                                                */
@@ -118,31 +117,86 @@ export function Entity<T extends object | Constructor<object>>(props: EntityProp
 /*                                                                                */
 /**********************************************************************************/
 
-type ResourceProps<TUrl, TResult extends object> = Omit<Props<TResult>, "children"> & {
-  loader: new () => Loader<TResult, TUrl>
-  url: TUrl
-  path?: string
-  children?: (result: Accessor<TResult>) => JSXElement
-}
+type ResourceProps<TLoader extends Loader<object, any>> = UseLoaderOptions<
+  TLoader,
+  LoaderUrl<TLoader>
+> &
+  Omit<Props<LoaderData<TLoader>>, "children"> & {
+    loader: Constructor<TLoader>
+    url: LoaderUrl<TLoader>
+    children?: (result: Accessor<LoadOutput<TLoader, LoaderUrl<TLoader>>>) => JSXElement
+  }
 
-export function Resource<TUrl extends string | string[], TResult extends object>(
-  props: ResourceProps<TUrl, TResult>,
-) {
-  const [config, rest] = splitProps(props, ["loader", "path", "url"])
-  const loader = createMemo(() => new config.loader())
-  const [resource] = createResource(
-    () => [config.url, loader(), config.path] as const,
-    ([url, loader, path]) => {
-      loader.setPath?.(path ?? "")
-      return load(loader, url)
-    },
+/**
+ * A component for loading Three.js resources (textures, models, etc.) with automatic caching and Suspense integration.
+ *
+ * The Resource component wraps the `useLoader` hook in a declarative component API, making it easy to load
+ * and use Three.js assets within your scene. It integrates with Solid's Suspense system for handling loading states.
+ *
+ * When no children prop is provided, Resource automatically renders the loaded resource as an Entity,
+ * passing through any additional props to the loaded object. This allows for direct property assignment
+ * and attachments.
+ *
+ * @template TLoader The Three.js loader type (e.g., TextureLoader, GLTFLoader)
+ * @template TUrl The URL input type - depends on what the loader expects (string, string[], or record)
+ *
+ * @param props - Configuration object
+ * @param props.loader - Three.js loader constructor (e.g., TextureLoader, GLTFLoader)
+ * @param props.url - URL(s) to load - can be a string, array of strings, or object mapping keys to URLs
+ * @param props.children - Optional render function that receives the loaded resource
+ * @param props.base - Base URL for resolving relative paths
+ * @param props.cache - Caching behavior: true (default), false, or custom LoaderRegistry instance
+ * @param props.onBeforeLoad - Callback executed before loading starts
+ * @param props.onLoad - Callback executed after successful loading
+ * @param props.* - Any additional props are passed to the loaded resource when children is not provided
+ *
+ * @returns JSX element that renders the loaded resource
+ *
+ * @example
+ * ```tsx
+ * // Texture automatically attached to parent material
+ * <T.MeshStandardMaterial>
+ *   <Resource loader={TextureLoader} url="texture.jpg" attach="map" />
+ *   <Resource loader={TextureLoader} url="normal.jpg" attach="normalMap" />
+ * </T.MeshStandardMaterial>
+ *
+ * // Model with transform props passed directly
+ * <Resource
+ *   loader={GLTFLoader}
+ *   url="model.gltf"
+ *   scale={2}
+ *   position={[0, 1, 0]}
+ *   rotation={[0, Math.PI, 0]}
+ * />
+ *
+ * // Custom handling with render function
+ * <Resource loader={TextureLoader} url="texture.jpg">
+ *   {texture => (
+ *     <T.Mesh>
+ *       <T.BoxGeometry />
+ *       <T.MeshBasicMaterial map={texture()} />
+ *     </T.Mesh>
+ *   )}
+ * </Resource>
+ * ```
+ */
+export function Resource<const TLoader extends Loader<object, any>>(props: ResourceProps<TLoader>) {
+  const [options, config, rest] = splitProps(
+    props,
+    ["base", "cache", "onBeforeLoad", "onLoad"],
+    ["loader", "url"],
   )
+
+  const resource = useLoader(
+    () => config.loader,
+    () => config.url,
+    options,
+  )
+
+  useProps(resource, rest)
+
   return (
-    <Show
-      when={"children" in props && resource()}
-      // @ts-expect-error FIXME
-      fallback={<Entity from={resource()} {...rest} />}
-    >
+    <Show when={"children" in rest && resource()} fallback={resource()}>
       {resource => props.children?.(resource)}
     </Show>
   )

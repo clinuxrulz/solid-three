@@ -3,6 +3,7 @@ import type {
   Clock,
   ColorRepresentation,
   Intersection,
+  Loader,
   OrthographicCamera,
   PerspectiveCamera,
   Raycaster,
@@ -116,6 +117,14 @@ export type ConstructorOverloadParameters<T extends Constructor> = T extends {
   ? U
   : never
 
+export type LoaderData<T extends Loader<object, any>> = T extends Loader<infer TData, any>
+  ? TData
+  : never
+
+export type LoaderUrl<T extends Loader<object, any>> = T extends Loader<object, infer TUrl>
+  ? TUrl
+  : never
+
 /**********************************************************************************/
 /*                                                s                                */
 /*                                     Context                                    */
@@ -155,16 +164,6 @@ export interface Viewport {
 
 /** Possible camera types. */
 export type CameraKind = PerspectiveCamera | OrthographicCamera
-
-export type Loader<TSource, TResult extends object> = {
-  setPath?(path: string): void
-  load: (
-    url: TSource,
-    onLoad: (result: TResult) => void,
-    onProgress: (() => void) | undefined,
-    onReject: ((error: ErrorEvent | unknown) => void) | undefined,
-  ) => unknown
-}
 
 export type FrameListenerCallback = (context: Context, delta: number, frame?: XRFrame) => void
 export type FrameListenerOptions = { priority?: number; stage?: "before" | "after" }

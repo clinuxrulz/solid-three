@@ -22,7 +22,7 @@ export function EnvironmentExample() {
           <Resource
             loader={THREE.CubeTextureLoader}
             attach="envMap"
-            path="https://rawcdn.githack.com/mrdoob/three.js/54ac263593c81b669ca9a089491ddd9e240427d2/examples/textures/cube/Bridge2/"
+            base="https://rawcdn.githack.com/mrdoob/three.js/54ac263593c81b669ca9a089491ddd9e240427d2/examples/textures/cube/Bridge2/"
             url={["posx.jpg", "negx.jpg", "posy.jpg", "negy.jpg", "posz.jpg", "negz.jpg"]}
           />
         </T.MeshStandardMaterial>

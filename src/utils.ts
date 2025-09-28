@@ -1,7 +1,8 @@
 import type { Accessor, Context, JSX } from "solid-js"
-import { createRenderEffect, type MergeProps, mergeProps, onCleanup, type Ref } from "solid-js"
+import { createRenderEffect, mergeProps, onCleanup, type Ref } from "solid-js"
 import {
   Camera,
+  Loader,
   Material,
   Object3D,
   OrthographicCamera,
@@ -10,7 +11,15 @@ import {
   Vector3,
 } from "three"
 import { $S3C } from "./constants.ts"
-import type { CameraKind, Constructor, Data, Loader, Meta } from "./types.ts"
+import type {
+  CameraKind,
+  Constructor,
+  Data,
+  LoaderData,
+  LoaderUrl,
+  Meta,
+  Prettify,
+} from "./types.ts"
 import type { Measure } from "./utils/use-measure.ts"
 
 /**********************************************************************************/
@@ -18,6 +27,9 @@ import type { Measure } from "./utils/use-measure.ts"
 /*                                      Guards                                    */
 /*                                                                                */
 /**********************************************************************************/
+
+export const isRecord = (value: any): value is Record<string, any> =>
+  !Array.isArray(value) && typeof value === "object"
 
 export const isOrthographicCamera = (def: Camera): def is OrthographicCamera =>
   "isOrthographicCamera" in def && !!def.isOrthographicCamera
@@ -72,6 +84,49 @@ export function hasMeta<T>(element: T): element is Meta<T> {
 
 /**********************************************************************************/
 /*                                                                                */
+/*                                Await Map Object                                */
+/*                                                                                */
+/**********************************************************************************/
+
+export async function awaitMapObject<T extends object, U>(
+  object: T,
+  callback: (value: T[keyof T], key: keyof T) => Promise<U>,
+) {
+  const result = {} as {
+    [TKey in keyof T]: U
+  }
+  for (const key in object) {
+    result[key] = await callback(object[key], key)
+  }
+  return result
+}
+
+/**********************************************************************************/
+/*                                                                                */
+/*                                    Bubble Up                                   */
+/*                                                                                */
+/**********************************************************************************/
+
+/**
+ * Traverses up the tree from a given node to the root, executing a callback on each node.
+ * @template T The type of data stored in the tree
+ * @param node The starting node
+ * @param callback Function to execute on each node during traversal
+ * @internal
+ */
+export function bubbleUp<T extends { parent: any }>(
+  node: T,
+  callback: (node: T["parent"]) => void,
+) {
+  let current: T | undefined = node
+  while (current) {
+    callback(current)
+    current = "parent" in current ? current.parent : undefined
+  }
+}
+
+/**********************************************************************************/
+/*                                                                                */
 /*                                   Build Graph                                  */
 /*                                                                                */
 /**********************************************************************************/
@@ -103,10 +158,10 @@ type KeyOfOptionals<T> = keyof {
   [K in keyof T as T extends Record<K, T[K]> ? never : K]: T[K]
 }
 
-export function defaultProps<T, K extends KeyOfOptionals<T>>(
-  props: T,
-  defaults: Required<Pick<T, K>>,
-): MergeProps<[Required<Pick<T, K>>, T]> {
+export function defaultProps<
+  const T,
+  const TDefaults extends Partial<Required<Pick<T, KeyOfOptionals<T>>>>,
+>(props: T, defaults: TDefaults): Prettify<TDefaults & Omit<T, keyof TDefaults>> {
   return mergeProps(defaults, props)
 }
 
@@ -264,22 +319,24 @@ export function withMultiContexts<TResult, T extends readonly [unknown?, ...unkn
 /*                                                                                */
 /**********************************************************************************/
 
-export function load<
-  const TIn extends string | string[],
-  const TPaths extends Record<string, TIn>,
-  TOut extends object,
->(loader: Loader<TIn, TOut>, path: TPaths): Promise<{ [TKey in keyof TPaths]: Texture }>
-export function load<TIn extends string | string[], TOut extends object>(
-  loader: Loader<TIn, TOut>,
-  path: TIn,
-): Promise<TOut>
-export async function load(loader: Loader<any, any>, path: any) {
-  if (!Array.isArray(path) && typeof path === "object") {
+export type LoadInput<TLoader extends Loader<any, any>> =
+  | LoaderUrl<TLoader>
+  | Record<string, LoaderUrl<TLoader>>
+
+export type LoadOutput<TLoader extends Loader<any, any>, TUrl> = TUrl extends Record<string, any>
+  ? { [TKey in keyof TUrl]: LoaderData<TLoader> }
+  : LoaderData<TLoader>
+
+export async function load<
+  const TLoader extends Loader<any, any>,
+  TInput extends LoadInput<TLoader>,
+>(loader: TLoader, input: TInput): Promise<LoadOutput<TLoader, TInput>> {
+  if (!isRecord(input)) {
     return Object.entries(
-      await Promise.all(Object.keys(path).map(async path => [path, await load(loader, path)])),
+      await Promise.all(Object.keys(input).map(async path => [path, await load(loader, path)])),
     )
   }
-  return new Promise((resolve, reject) => loader.load(path, resolve, undefined, reject))
+  return new Promise((resolve, reject) => loader.load(input, resolve, undefined, reject))
 }
 
 /**********************************************************************************/
