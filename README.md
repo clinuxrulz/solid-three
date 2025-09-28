@@ -29,6 +29,7 @@
    - [useProps](#useprops)
 5. [Utilities](#utilities)
    - [Raycasters](#raycasters)
+   - [LoaderCache](#loadercache)
    - [autodispose](#autodispose)
    - [Metadata Utilities](#metadata-utilities)
    - [Testing Utilities](#testing-utilities)
@@ -408,6 +409,7 @@ const App = () => {
 Declarative component for loading Three.js resources with automatic caching and Suspense integration. When no children are provided, the loaded resource is automatically rendered with any additional props passed through.
 
 **Props:**
+
 - `loader` - Three.js loader constructor (e.g., `TextureLoader`, `GLTFLoader`)
 - `url` - URL(s) to load (string, array, or object)
 - `children` - Optional render function
@@ -822,82 +824,6 @@ useLoader.cache = myCache
 const texture = useLoader(TextureLoader, url, { cache: myCache })
 ```
 
-### LoaderCache
-
-`LoaderCache` is the built-in implementation of the `LoaderRegistry` interface that `solid-three` exports. It's automatically set as the default cache for `useLoader`, providing a sophisticated caching system with automatic memory management for Three.js loader resources.
-
-**Features:**
-
-- **Automatic Reference Counting**: Tracks how many components are using each resource
-- **Solid.js Integration**: Automatically decrements reference counts when components unmount
-- **Deferred Disposal**: Resources are added to a "free list" when no longer referenced
-- **Memory Management**: Call `emptyFreeList()` to dispose of unused resources
-- **Multi-Loader Support**: Each Three.js loader gets its own isolated cache namespace
-- **Path-based Storage**: Hierarchical storage using paths for efficient lookups
-
-**Basic Usage:**
-
-```tsx
-import { LoaderCache } from "solid-three"
-
-// Create a cache instance
-const cache = new LoaderCache()
-
-// Store a resource
-const texturePromise = textureLoader.loadAsync("wood.jpg")
-cache.set(textureLoader, "wood.jpg", texturePromise)
-
-// Retrieve a resource (automatically tracked in reactive contexts)
-const texture = cache.get(textureLoader, "wood.jpg")
-```
-
-**Memory Management:**
-
-```tsx
-const cache = new LoaderCache()
-
-// Resources with zero references are added to the free list
-// They are not immediately disposed to allow for re-use
-
-// Periodically clean up unused resources
-setInterval(() => {
-  cache.emptyFreeList()
-}, 60000) // Every minute
-
-// Force delete a specific resource
-cache.deleteResource(texture, { force: true })
-
-// Delete by loader and path
-cache.delete(textureLoader, "wood.jpg", { force: true })
-```
-
-**Reference Counting Example:**
-
-```tsx
-const TexturedBox = () => {
-  // This increments the reference count for 'texture.jpg'
-  const texture = useLoader(TextureLoader, "texture.jpg")
-
-  // When this component unmounts, the reference count decreases
-  // If it reaches zero, the texture is added to the free list
-  return (
-    <T.Mesh>
-      <T.BoxGeometry />
-      <T.MeshBasicMaterial map={texture()} />
-    </T.Mesh>
-  )
-}
-
-// Multiple components can share the same cached resource
-const Scene = () => (
-  <>
-    <TexturedBox /> {/* ref count: 1 */}
-    <TexturedBox /> {/* ref count: 2 */}
-    <TexturedBox /> {/* ref count: 3 */}
-  </>
-)
-```
-
 **Advanced Usage with Multiple Loaders:**
 
 ```tsx
@@ -1086,6 +1012,68 @@ const App = () => {
 }
 ```
 
+### LoaderCache
+
+`LoaderCache` is the default cache-manager for `useLoader`. It implements the `LoaderRegistry` interface and adds additional methods to simplify managing the cached resources.
+
+**Features:**
+
+- **Automatic Reference Counting**: Tracks if a resource is currently actively in-use
+- **Deferred Disposal**: Resources are added to a free list when no longer referenced
+- **Disposal Methods**: Several methods to ease managing disposal of resources
+  - **dispose(loader, path)**: dispose a resource based on loader and path
+  - **disposeResource(resource)**: dispose a resource by passing the resource directly
+  - **disposeFreeList()**: dispose all currently not referenced resources
+
+**Example:**
+
+```tsx
+const TexturedBox = () => {
+  // This increments the reference count for 'texture.jpg'
+  const texture = useLoader(TextureLoader, "texture.jpg")
+
+  // When this component unmounts, the reference count decreases
+  // If it reaches zero, the texture is added to the free list
+  return (
+    <T.Mesh>
+      <T.BoxGeometry />
+      <T.MeshBasicMaterial map={texture()} />
+    </T.Mesh>
+  )
+}
+
+// Multiple components can share the same cached resource
+const Scene = () => (
+  <>
+    <TexturedBox /> {/* ref count: 1 */}
+    <TexturedBox /> {/* ref count: 2 */}
+    <TexturedBox /> {/* ref count: 3 */}
+  </>
+)
+
+const App = () => {
+  const [visible, setVisible] = createSignal(true)
+
+  onMount(() => {
+    // ❌ Texture will not be disposed because it is referenced (3 times)
+    useLoader.cache.disposeFreeList()
+
+    setVisible(false)
+
+    // ✅ Texture will be disposed because it is not referenced anymore
+    useLoader.cache.disposeFreeList()
+  })
+
+  return (
+    <Canvas>
+      <Show when={visible}>
+        <Scene />
+      </Show>
+    </Canvas>
+  )
+}
+```
+
 ### autodispose
 
 The `autodispose` utility ensures that three.js objects are properly disposed on cleanup.
@@ -1112,7 +1100,7 @@ import { Show, createSignal } from "solid-js"
 import { Entity, autodispose } from "solid-three"
 import { Mesh, BoxGeometry, MeshBasicMaterial } from "three"
 
-function ConditionalMesh() {
+function StrobeMesh() {
   const [visible, setVisible] = createSignal(true)
 
   // These will be disposed when ConditionalMesh unmounts
@@ -1171,23 +1159,7 @@ const MyTest = () => {
 
 ## Event Handling
 
-`solid-three` provides a comprehensive event system that integrates `three.js` pointer and mouse events with `solid-js`' reactivity. Events are automatically handled through raycasting and support stopping propagation.
-
-### Controlling Raycasting with raycastable
-
-The `raycastable` prop controls whether an Object3D can be targeted by raycasting:
-
-- **raycastable** (`boolean`): When set to `false`, the object will not be hit by rays, but can still receive events through propagation from its descendants. Default is `true`.
-
-```tsx
-const RaycastableMesh = () => {
-  return (
-    <T.Mesh name="parent" raycastable={false} onClick={() => console.log("Child clicked!")}>
-      <T.Mesh name="child" />
-    </T.Mesh>
-  )
-}
-```
+`solid-three` provides a custom event system inspired by [`react-three-fiber`](https://github.com/pmndrs/react-three-fiber). Events are automatically handled through raycasting and support DOM-like propagation.
 
 ### Supported Events
 
@@ -1412,6 +1384,22 @@ solid-three's hover event handling differs from react-three-fiber in several key
 - **solid-three**: When moving from child to parent, only the child receives a leave event (DOM-like behavior)
 - **react-three-fiber**: When moving from child to parent, the parent receives both leave and immediate re-enter events
 </details>
+
+### Controlling Raycasting with raycastable
+
+The `raycastable` prop controls whether an Object3D can be targeted by raycasting:
+
+- **raycastable** (`boolean`): When set to `false`, the object will not be hit by rays, but can still receive events through propagation from its descendants. Default is `true`.
+
+```tsx
+const RaycastableMesh = () => {
+  return (
+    <T.Mesh name="parent" raycastable={false} onClick={() => console.log("Child clicked!")}>
+      <T.Mesh name="child" />
+    </T.Mesh>
+  )
+}
+```
 
 ## Performance Optimization
 
