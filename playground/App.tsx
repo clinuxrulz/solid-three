@@ -3,6 +3,7 @@ import type { ParentProps } from "solid-js"
 import * as THREE from "three"
 import { Canvas, createT, Entity } from "../src/index.ts"
 import { EnvironmentExample } from "./examples/EnvironmentExample.tsx"
+import { GltfExample } from "./examples/Gltf.tsx"
 import { PortalExample } from "./examples/PortalExample.tsx"
 import { SolarExample } from "./examples/SolarExample.tsx"
 import "./index.css"
@@ -67,6 +68,17 @@ function Layout(props: ParentProps) {
         >
           Environment
         </A>
+        <A
+          href="/gltf"
+          style={{
+            color: "white",
+            "text-decoration": "none",
+            padding: "5px 10px",
+            display: "block",
+          }}
+        >
+          Gltf
+        </A>
       </nav>
       {props.children}
     </>
@@ -79,6 +91,7 @@ export function App() {
       <Route path="/simple-solar" component={SolarExample} />
       <Route path="/portal" component={PortalExample} />
       <Route path="/environment" component={EnvironmentExample} />
+      <Route path="/gltf" component={GltfExample} />
       <Route
         path="/"
         component={() => (

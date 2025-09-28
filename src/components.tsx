@@ -184,7 +184,7 @@ export function Resource<const TLoader extends Loader<object, any>>(props: Resou
   const [options, config, rest] = splitProps(
     props,
     ["base", "cache", "onBeforeLoad", "onLoad"],
-    ["loader", "url"],
+    ["loader", "url", "children"],
   )
 
   const resource = useLoader(
@@ -196,7 +196,7 @@ export function Resource<const TLoader extends Loader<object, any>>(props: Resou
   useProps(resource, rest)
 
   return (
-    <Show when={"children" in rest && resource()} fallback={resource()}>
+    <Show when={"children" in config && resource()} fallback={resource()}>
       {resource => props.children?.(resource)}
     </Show>
   )

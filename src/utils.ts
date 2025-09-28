@@ -331,10 +331,8 @@ export async function load<
   const TLoader extends Loader<any, any>,
   TInput extends LoadInput<TLoader>,
 >(loader: TLoader, input: TInput): Promise<LoadOutput<TLoader, TInput>> {
-  if (!isRecord(input)) {
-    return Object.entries(
-      await Promise.all(Object.keys(input).map(async path => [path, await load(loader, path)])),
-    )
+  if (isRecord(input)) {
+    return await awaitMapObject(input, path => load(loader, path))
   }
   return new Promise((resolve, reject) => loader.load(input, resolve, undefined, reject))
 }
