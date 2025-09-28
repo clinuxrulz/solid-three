@@ -1,8 +1,8 @@
 import { createEffect, createMemo, createSignal, Show, type ParentProps, type Ref } from "solid-js"
 import * as THREE from "three"
-import { Canvas, createT, Entity, useFrame } from "../../src/index.ts"
-import type { Meta } from "../../src/types.ts"
-import { OrbitControls } from "../controls/OrbitControls.tsx"
+import { Canvas, createT, Entity, useFrame } from "../../../src/index.ts"
+import type { Meta } from "../../../src/types.ts"
+import { OrbitControls } from "../../controls/orbit-controls.tsx"
 
 const T = createT(THREE)
 
@@ -117,7 +117,7 @@ function CelestialBody(
   )
 }
 
-export function SolarExample() {
+export default function () {
   return (
     <Canvas
       defaultCamera={{ position: new THREE.Vector3(0, 0, 30) }}

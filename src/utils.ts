@@ -13,6 +13,7 @@ import {
 import { $S3C } from "./constants.ts"
 import type {
   CameraKind,
+  ClassInstance,
   Constructor,
   Data,
   LoaderData,
@@ -28,8 +29,19 @@ import type { Measure } from "./utils/use-measure.ts"
 /*                                                                                */
 /**********************************************************************************/
 
-export const isRecord = (value: any): value is Record<string, any> =>
-  !Array.isArray(value) && typeof value === "object"
+export function isRecord(value: any): value is Record<string, any> {
+  return !Array.isArray(value) && typeof value === "object"
+}
+
+export function isClassInstance<T extends object>(obj: any): obj is ClassInstance<T> {
+  return (
+    obj != null &&
+    typeof obj === "object" &&
+    !Array.isArray(obj) &&
+    obj.constructor !== Object &&
+    Object.getPrototypeOf(obj) !== Object.prototype
+  )
+}
 
 export const isOrthographicCamera = (def: Camera): def is OrthographicCamera =>
   "isOrthographicCamera" in def && !!def.isOrthographicCamera
@@ -210,11 +222,17 @@ export const removeElementFromArray = (array: any[], value: any) => {
 /**********************************************************************************/
 
 export function resolve<T>(child: Accessor<T> | T, recursive = false): T {
-  return typeof child !== "function"
-    ? child
-    : recursive
-    ? resolve((child as Accessor<T>)())
-    : (child as Accessor<T>)()
+  if (isConstructor(child)) {
+    return child
+  }
+  if (typeof child === "function") {
+    const value = child()
+    if (recursive) {
+      return resolve(value)
+    }
+    return value
+  }
+  return child
 }
 
 /**********************************************************************************/

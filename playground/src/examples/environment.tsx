@@ -1,11 +1,11 @@
 import * as THREE from "three"
-import { Resource } from "../../src/components.tsx"
-import { Canvas, createT } from "../../src/index.ts"
-import { OrbitControls } from "../controls/OrbitControls.tsx"
+import { Resource } from "../../../src/components.tsx"
+import { Canvas, createT } from "../../../src/index.ts"
+import { OrbitControls } from "../../controls/orbit-controls.tsx"
 
 const T = createT(THREE)
 
-export function EnvironmentExample() {
+export default function () {
   return (
     <Canvas
       style={{ width: "100vw", height: "100vh" }}

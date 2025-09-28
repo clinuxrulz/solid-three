@@ -65,78 +65,27 @@ Ensure that `solid-js` is installed in your environment, as it is a peer depende
 Here's a simple example to get you started:
 
 ```tsx
-import { Component, createSignal } from "solid-js"
-import { Canvas, Entity, useFrame } from "solid-three"
-import * as THREE from "three"
-
-const Box = () => {
-  let mesh: THREE.Mesh | undefined
-  const [hovered, setHovered] = createSignal(false)
-
-  useFrame(() => (mesh!.rotation.y += 0.01))
-
-  return (
-    <Entity
-      from={THREE.Mesh}
-      ref={mesh}
-      onPointerEnter={e => setHovered(true)}
-      onPointerLeave={e => setHovered(false)}
-    >
-      <Entity from={THREE.BoxGeometry} />
-      <Entity from={THREE.MeshStandardMaterial} args={[{ color: hovered() ? "green" : "red" }]} />
-    </Entity>
-  )
-}
-
-const App: Component = () => {
-  return (
-    <Canvas camera={{ position: [0, 0, 5] }}>
-      <Entity from={THREE.AmbientLight} args={[0.5]} />
-      <Entity from={THREE.PointLight} position={[10, 10, 10]} />
-      <Box />
-    </Canvas>
-  )
-}
+<Entity from={THREE.Mesh}>
+  <Entity from={THREE.BoxGeometry} args={[1, 1, 1]} />
+  <Entity from={THREE.MeshStandardMaterial} args={["red"]} />
+</Entity>
 ```
+
+([see](/playground/src/api/entity/constructor-usage.tsx))
 
 Alternatively, using the `createT()` pattern:
 
 ```tsx
-import { Component, createSignal } from "solid-js"
-import { Canvas, createT, useFrame } from "solid-three"
-import * as THREE from "three"
-
 // Create the T namespace
 const T = createT(THREE)
 
-const Box = () => {
-  let mesh: THREE.Mesh | undefined
-  const [hovered, setHovered] = createSignal(false)
-
-  useFrame(() => (mesh!.rotation.y += 0.01))
-
-  return (
-    <T.Mesh
-      ref={mesh}
-      onPointerEnter={e => setHovered(true)}
-      onPointerLeave={e => setHovered(false)}
-    >
-      <T.BoxGeometry args={[1, 1, 1]} />
-      <T.MeshStandardMaterial color={hovered() ? "green" : "red"} />
-    </T.Mesh>
-  )
-}
-
-const App: Component = () => {
-  return (
-    <Canvas camera={{ position: [0, 0, 5] }}>
-      <T.AmbientLight intensity={0.5} />
-      <T.PointLight position={[10, 10, 10]} />
-      <Box />
-    </Canvas>
-  )
-}
+<T.Mesh>
+  <T.BoxGeometry args={[1, 1, 1]} />
+  <T.MeshStandardMaterial args={["red"]} />
+</T.Mesh>
 ```
+
+([see](/playground/src/api/t/complete-three.tsx))
 
 **Choosing between `Entity` and `T`:**
 
@@ -214,98 +163,29 @@ interface CanvasProps {
 </Canvas>
 ```
 
-### T
-
-The `T` namespace contains components that wrap `three.js` objects, allowing you to insert them into your scene declaratively. You create the namespace using the `createT()` factory function:
-
-```tsx
-import { createT } from "solid-three"
-import * as THREE from "three"
-
-// Create T namespace with all three.js objects
-const T = createT(THREE)
-
-// Now you can use T components
-<T.Mesh>
-  <T.BoxGeometry args={[1, 1, 1]} />
-  <T.MeshBasicMaterial color="hotpink" />
-</T.Mesh>
-```
-
-You can also create a namespace with specific objects for tree-shaking purposes:
-
-```tsx
-import { createT } from "solid-three"
-import { Mesh, BoxGeometry, MeshBasicMaterial } from "three"
-
-// Create T namespace with only specific objects
-const T = createT({ Mesh, BoxGeometry, MeshBasicMaterial })
-```
-
-**Usage Patterns:**
-
-- **In Applications**: Create a single `T` and export it for use throughout your app
-- **In Libraries**: create multiple `T` to allow for treeshaking or use [`<Entity/>`](#entity) instead
-- **Multiple Ts**: Create multiple T instances for lazy loading different parts of three.js
-
-#### Advanced Prop Patterns
-
-`solid-three` supports advanced prop attachment patterns for precise control:
-
-```tsx
-const AdvancedProps = () => {
-  return (
-    <T.Mesh>
-      <T.BoxGeometry args={[1, 1, 1]} />
-      <T.MeshStandardMaterial
-        // Direct property setting
-        color="red"
-        // Nested property access with dot notation
-        material-color="blue"
-        // Sub-property access with hyphens
-        position-x={2}
-        rotation-y={Math.PI / 4}
-        scale-z={0.5}
-        // Deep nested properties
-        material-emissive-intensity={0.5}
-      />
-    </T.Mesh>
-  )
-}
-```
-
-**Supported patterns:**
-
-- **Direct props**: `color="red"` → `object.color = "red"`
-- **Hyphen notation**: `position-x={1}` → `object.position.x = 1`
-- **Deep nesting**: `material-emissive-intensity={0.5}` → `object.material.emissive.intensity = 0.5`
-
-These patterns automatically trigger `needsUpdate` flags on materials and geometries when necessary.
+([see](/playground/src/api/canvas/usage.tsx))
 
 ### Entity
 
 The `Entity` component provides an alternative way to create three.js objects without needing to pre-create a T namespace. This is particularly useful in libraries or when working with dynamic object types:
 
+You can pass a constructor
+
 ```tsx
-import { Entity } from "solid-three"
-import { Mesh, BoxGeometry, MeshBasicMaterial } from "three"
-
-function Constructor() {
-  return (
-    // Pass constructor with optional arguments
-    <Entity from={Mesh}>
-      <Entity from={BoxGeometry} />
-      <Entity from={MeshBasicMaterial} args={[{ color: "orange" }]} />
-    </Entity>
-  )
-}
-
-function Instance() {
-  // Pass instance
-  const mesh = new Mesh()
-  return <Entity from={mesh} position={[0, 0, 0]} />
-}
+<Entity from={Mesh}>
+  <Entity from={BoxGeometry} args={[1, 1, 1]} />
+  <Entity from={MeshBasicMaterial} args={[{"orange"}]} />
+</Entity>
 ```
+
+or pass an instance
+
+```tsx
+const mesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial('orange))
+<Entity from={mesh} position={[0, 0, 0]} />
+```
+
+([see](/playground/src/api/entity/instance-usage.tsx))
 
 **Props:**
 
@@ -328,12 +208,13 @@ interface EntityProps {
 
 #### Manual disposal of instance-entities
 
-When passing an instance to `<Entity from={...}/>` disposal need to be handled manually. This can be done via the [`autodispose`-utility](#autodispose):
+When passing an instance to `<Entity from={...}/>` disposal need to be handled manually. This can be done via the [`autodispose`-utility](#autodispose).
+
+**❌ Wrong**
+
+If you do not dispose of box/sphere after the component unmounts, threejs will retain the resource in memory.
 
 ```tsx
-import { Entity, autodispose } from "solid-three"
-import { BoxGeometry, SphereGeometry } from "three"
-
 function Wrong(props: { shape: "box" | "sphere" }) {
   const box = new BoxGeometry()
   const sphere = new SphereGeometry()
@@ -343,7 +224,13 @@ function Wrong(props: { shape: "box" | "sphere" }) {
     </Show>
   )
 }
+```
 
+**✅ Good**
+
+By wrapping `BoxGeometry` and `SphereGeometry` in `autodispose`, the resources are automatically disposed once the component cleans up.
+
+```tsx
 function Good(props: { shape: "box" | "sphere" }) {
   const box = autodispose(new BoxGeometry())
   const sphere = autodispose(new SphereGeometry())
@@ -354,6 +241,76 @@ function Good(props: { shape: "box" | "sphere" }) {
   )
 }
 ```
+
+([see](/playground/src/api/autodispose/basic-usage.tsx))
+
+#### Advanced Prop Patterns
+
+`solid-three` supports advanced prop attachment patterns for precise control:
+
+```tsx
+<Entity
+  from={MeshStandardMaterial}
+  // Direct property setting
+  color="red"
+  // Nested property access with dot notation
+  material-color="blue"
+  // Sub-property access with hyphens
+  position-x={2}
+  rotation-y={Math.PI / 4}
+  scale-z={0.5}
+  // Deep nested properties
+  material-emissive-intensity={0.5}
+/>
+```
+
+([see](/playground/src/api/entity/advanced-props.tsx))
+
+**Supported patterns:**
+
+- **Direct props**: `color="red"` → `object.color = "red"`
+- **Hyphen notation**: `position-x={1}` → `object.position.x = 1`
+- **Deep nesting**: `material-emissive-intensity={0.5}` → `object.material.emissive.intensity = 0.5`
+
+These patterns automatically trigger `needsUpdate` flags on materials and geometries when necessary.
+
+### T
+
+The `T` namespace contains components that wrap `three.js` objects, allowing you to insert them into your scene declaratively. You create the namespace using the `createT()` factory function:
+
+```tsx
+import { createT } from "solid-three"
+import * as THREE from "three"
+
+// Create T namespace with all three.js objects
+const T = createT(THREE)
+
+// Now you can use T components
+<T.Mesh>
+  <T.BoxGeometry args={[1, 1, 1]} />
+  <T.MeshBasicMaterial color="hotpink" />
+</T.Mesh>
+```
+
+([see](/playground/src/api/t/complete-three.tsx))
+
+You can also create a namespace with specific objects for tree-shaking purposes:
+
+```tsx
+import { createT } from "solid-three"
+import { Mesh, BoxGeometry, MeshBasicMaterial } from "three"
+
+// Create T namespace with only specific objects
+const T = createT({ Mesh, BoxGeometry, MeshBasicMaterial })
+```
+
+([see](/playground/src/api/t/tree-shaking.tsx))
+
+**Usage Patterns:**
+
+- **In Applications**: Create a single `T` and export it for use throughout your app
+- **In Libraries**: create multiple `T` to allow for treeshaking or use [`<Entity/>`](#entity) instead
+- **Multiple Ts**: Create multiple T instances for lazy loading different parts of three.js
 
 ### Portal
 
@@ -379,30 +336,15 @@ type PortalProps<T extends Object3D> = ParentProps<{
 Example:
 
 ```tsx
-import { Portal } from "solid-three"
-
-// Create a separate scene for UI elements
-const uiScene = new Scene()
-
-const App = () => {
-  return (
-    <Canvas>
-      <T.Mesh>
-        <T.BoxGeometry args={[1, 1, 1]} />
-        <T.MeshBasicMaterial color="blue" />
-      </T.Mesh>
-
-      {/* Render these objects into a different scene */}
-      <Portal element={uiScene}>
-        <T.Mesh position={[2, 0, 0]}>
-          <T.SphereGeometry args={[15, 32, 16]} />
-          <T.MeshBasicMaterial color="red" />
-        </T.Mesh>
-      </Portal>
-    </Canvas>
-  )
-}
+<Portal element={uiScene}>
+  <T.Mesh position={[2, 0, 0]}>
+    <T.SphereGeometry args={[15, 32, 16]} />
+    <T.MeshBasicMaterial color="red" />
+  </T.Mesh>
+</Portal>
 ```
+
+([see](/playground/src/api/portal/usage.tsx))
 
 ### Resource
 
@@ -442,6 +384,8 @@ Wrapper-component around ['useLoader'](#useloader).
 <Resource loader={TextureLoader} url="/dynamic-texture.png" cache={false} />
 ```
 
+([see](/playground/src/api/resource/usage.tsx))
+
 ## Hooks
 
 ### useThree
@@ -477,44 +421,45 @@ Provides access to the `three.js` context, including the renderer, scene, camera
 **Usage:**
 
 ```tsx
-function Camera(props) {
-  const three = useThree()
-  const customCamera = new OrthographicCamera(/* ... */)
+const three = useThree()
 
-  // Push a new camera onto the stack
-  const restoreCamera = three.setCamera(customCamera)
+createEffect(() => {
+  if (useOrtho()) {
+    const orthoCamera = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000)
+    orthoCamera.position.set(0, 0, 5)
 
-  // The custom camera is now active
-  // When done, call the cleanup to pop camera from the stack
-  onCleanup(restoreCamera)
+    // Push ortho camera onto stack
+    const restore = three.setCamera(orthoCamera)
 
-  return null!
-}
+    // Cleanup automatically restores previous camera
+    onCleanup(restore)
+  }
+})
 ```
+
+([see](/playground/src/api/use-three/camera-switch.tsx))
 
 **Practical Example - Camera Switching:**
 
 ```tsx
-const CameraController = () => {
-  const three = useThree()
-  const [useOrtho, setUseOrtho] = createSignal(false)
+const three = useThree()
+const [useOrtho, setUseOrtho] = createSignal(false)
 
-  createEffect(() => {
-    if (useOrtho()) {
-      const orthoCamera = new OrthographicCamera(-5, 5, 5, -5, 0.1, 1000)
-      orthoCamera.position.set(0, 0, 5)
+createEffect(() => {
+  if (useOrtho()) {
+    const orthoCamera = new OrthographicCamera(-5, 5, 5, -5, 0.1, 1000)
+    orthoCamera.position.set(0, 0, 5)
 
-      // Push ortho camera onto stack
-      const restore = three.setCamera(orthoCamera)
+    // Push ortho camera onto stack
+    const restore = three.setCamera(orthoCamera)
 
-      // Cleanup automatically restores previous camera
-      onCleanup(restore)
-    }
-  })
-
-  return <button onClick={() => setUseOrtho(v => !v)}>Toggle Orthographic Camera</button>
-}
+    // Cleanup automatically restores previous camera
+    onCleanup(restore)
+  }
+})
 ```
+
+([see](/playground/src/api/use-three/camera-switch.tsx))
 
 ### useFrame
 
@@ -536,61 +481,38 @@ Registers a callback that will be called before every frame is rendered, useful 
 ```tsx
 useFrame(
   callback: (context: Context, delta: number, frame?: XRFrame) => void,
-  options?: FrameListenerOptions
+  options?: {
+    priority?: number
+    stage?: "before" | "after"
+  }
 )
-
-interface FrameListenerOptions {
-  priority?: number
-  stage?: "before" | "after"
-}
 ```
 
 </details>
 
-**Basic usage:**
+**Usage:**
 
 ```tsx
-const RotatingMesh = () => {
-  let mesh: THREE.Mesh = null!
+let mesh: THREE.Mesh = null!
 
-  useFrame((context, delta) => {
-    mesh.rotation.y += delta * Math.PI
-  })
+// Run with high priority before render
+useFrame(
+  (context, delta) => {
+    mesh.position.x = Math.sin(delta) * 2
+  },
+  { priority: -1 },
+)
 
-  return (
-    <T.Mesh ref={mesh}>
-      <T.BoxGeometry args={[1, 1, 1]} />
-      <T.MeshStandardMaterial color="purple" />
-    </T.Mesh>
-  )
-}
+// Run after render with lower priority
+useFrame(
+  (context, delta) => {
+    console.info("Frame rendered")
+  },
+  { stage: "after", priority: 10 },
+)
 ```
 
-**With options:**
-
-```tsx
-const AnimatedMesh = () => {
-  let mesh: THREE.Mesh = null!
-
-  // Run with high priority before render
-  useFrame(
-    (context, delta) => {
-      mesh.position.x = Math.sin(context.clock.elapsedTime) * 2
-    },
-    { priority: -1 },
-  )
-
-  // Run after render with lower priority
-  useFrame(
-    (context, delta) => {
-      console.log("Frame rendered")
-    },
-    { stage: "after", priority: 10 },
-  )
-
-  return <T.Mesh ref={mesh} />
-}
-```
+([see](/playground/src/api/use-frame/usage.tsx))
 
 ### useLoader
 
@@ -642,6 +564,53 @@ const textures = useLoader(TextureLoader, {
 const [url, setUrl] = createSignal("texture.jpg")
 const texture = useLoader(TextureLoader, url)
 ```
+
+([see](/playground/src/api/use-loader/single-texture.tsx))
+
+**Record Loading Example:**
+
+```tsx
+// Load multiple textures with descriptive names
+const textures = useLoader(THREE.TextureLoader, {
+  diffuse: "crate.gif",
+  normal: "brick_bump.jpg",
+  roughness: "roughnessMap.jpg"
+})
+
+// Use in material
+<T.MeshStandardMaterial
+  map={textures().diffuse}
+  normalMap={textures().normal}
+  roughnessMap={textures().roughness}
+/>
+```
+
+([see](/playground/src/api/use-loader/texture-record.tsx))
+
+**Cube Texture Example:**
+
+```tsx
+// Load cube texture with array of paths and properties
+const cubeTexture = useLoader(
+  THREE.CubeTextureLoader,
+  [
+    "px.jpg", "nx.jpg", // positive/negative x
+    "py.jpg", "ny.jpg", // positive/negative y
+    "pz.jpg", "nz.jpg"  // positive/negative z
+  ],
+  {
+    mapping: THREE.CubeReflectionMapping,
+    wrapS: THREE.ClampToEdgeWrapping,
+    wrapT: THREE.ClampToEdgeWrapping
+  }
+)
+
+// Use for environment mapping
+<T.Scene background={cubeTexture()} />
+<T.MeshStandardMaterial envMap={cubeTexture()} />
+```
+
+([see](/playground/src/api/use-loader/render-function.tsx))
 
 #### Custom Cache
 
@@ -696,22 +665,13 @@ function useProps<T extends object>(object: Accessor<T>, props: any): void
 This hook is primarily used internally by `solid-three` components, but can be useful when creating custom components or integrating existing THREE.js objects:
 
 ```tsx
-import { createSignal } from "solid-js"
-import { useProps } from "solid-three"
-import { Mesh, BoxGeometry, MeshBasicMaterial } from "three"
+const mesh = new Mesh(new BoxGeometry(), new MeshBasicMaterial())
 
-const CustomMesh = props => {
-  const mesh = new Mesh(new BoxGeometry(), new MeshBasicMaterial())
-
-  // Apply solid-three props reactively to the mesh
-  useProps(() => mesh, props)
-
-  return mesh // Return the THREE.js object for use in JSX
-}
-
-// Usage
-;<CustomMesh position={[1, 2, 3]} rotation={[0, Math.PI, 0]} color="red" />
+// Apply solid-three props reactively to the mesh
+useProps(mesh, props)
 ```
+
+([see](/playground/src/api/use-props/usage.tsx))
 
 **What it handles:**
 
@@ -724,10 +684,6 @@ const CustomMesh = props => {
 **Advanced usage:**
 
 ```tsx
-import { createMemo, createRenderEffect, onCleanup } from "solid-js"
-import { useProps, useThree } from "solid-three"
-import { Mesh, SphereGeometry, MeshStandardMaterial } from "three"
-
 export function OrbitControls(props: S3.Props<typeof ThreeOrbitControls>) {
   const three = useThree()
   const controls = createMemo<ThreeOrbitControls>(previous => {
@@ -743,6 +699,8 @@ export function OrbitControls(props: S3.Props<typeof ThreeOrbitControls>) {
   return null!
 }
 ```
+
+[see](/playground/controls/orbit-controls.tsx)
 
 ## Utilities
 
@@ -908,42 +866,47 @@ const App = () => {
 
 The `autodispose` utility ensures that three.js objects are properly disposed on cleanup.
 
-```tsx
-import { autodispose } from "solid-three"
-import { BoxGeometry, MeshBasicMaterial } from "three"
-
-function Component() {
-  // Any object wrapped with autodispose will be disposed when Component's owner cleans up
-  const geometry = autodispose(new BoxGeometry())
-  const material = autodispose(new MeshBasicMaterial({ color: "red" }))
-}
-```
-
 **Use cases:**
 
-- Creating reusable instances that should be disposed with the component
-- Working with conditional rendering where objects need cleanup
-- Managing resources in reactive contexts
+Working with conditional rendering where objects need cleanup
 
 ```tsx
 import { Show, createSignal } from "solid-js"
 import { Entity, autodispose } from "solid-three"
 import { Mesh, BoxGeometry, MeshBasicMaterial } from "three"
 
-function StrobeMesh() {
-  const [visible, setVisible] = createSignal(true)
+const [visible, setVisible] = createSignal(true)
 
-  // These will be disposed when ConditionalMesh unmounts
-  const geometry = autodispose(new BoxGeometry())
-  const material = autodispose(new MeshBasicMaterial())
+// These will be disposed when ConditionalMesh unmounts
+const geometry = autodispose(new BoxGeometry())
+const material = autodispose(new MeshBasicMaterial())
 
-  return (
-    <Show when={visible()}>
-      <Entity from={new Mesh(geometry, material)} />
-    </Show>
-  )
-}
+return (
+  <Show when={visible()}>
+    <Entity from={new Mesh(geometry, material)} />
+  </Show>
+)
 ```
+
+([see](/playground/src/api/autodispose/conditional-rendering.tsx))
+
+Creating reusable instances that should be disposed with the component
+
+```tsx
+const geometry = autodispose(new THREE.SphereGeometry(0.3, 16, 16))
+const material = autodispose(new THREE.MeshStandardMaterial())
+
+<Index each={Array.from({ length: instanceCount() })}>
+  {(_, i) => (
+    <T.Mesh position={[(i - instanceCount() / 2) * 0.8, 0, 0]}>
+      <Entity from={geometry} />
+      <Entity from={material} />
+    </T.Mesh>
+  )}
+</Index>
+```
+
+([see](/playground/src/api/autodispose/shared-resources.tsx))
 
 ### Metadata Utilities
 
@@ -1011,6 +974,8 @@ const MyTest = () => {
 - `onPointerUp` - Fired when pointer is released
 - `onWheel` - Fired on mouse wheel events
 
+([see](/playground/src/api/events/overview.tsx))
+
 ### Event Object
 
 Event handlers receive an event object with the following properties:
@@ -1077,6 +1042,8 @@ const EventPropagation = () => {
 }
 ```
 
+([see](/playground/src/api/events/event-propagation.tsx))
+
 In this example, clicking the overlapping area would normally trigger events in this order:
 
 1. Front mesh (closest to camera)
@@ -1123,6 +1090,8 @@ const ClickOutside = () => {
   )
 }
 ```
+
+([see](/playground/src/api/events/click-outside.tsx))
 
 **Blocked by stopPropagation**
 
@@ -1174,6 +1143,8 @@ const RayPropagation = () => {
 }
 ```
 
+([see](/playground/src/api/events/raycast-blocking.tsx))
+
 This is useful for:
 
 - Deselecting objects when clicking outside them
@@ -1222,111 +1193,12 @@ The `raycastable` prop controls whether an Object3D can be targeted by raycastin
 - **raycastable** (`boolean`): When set to `false`, the object will not be hit by rays, but can still receive events through propagation from its descendants. Default is `true`.
 
 ```tsx
-const RaycastableMesh = () => {
-  return (
-    <T.Mesh name="parent" raycastable={false} onClick={() => console.log("Child clicked!")}>
-      <T.Mesh name="child" />
-    </T.Mesh>
-  )
-}
+<T.Mesh name="parent" raycastable={false} onClick={() => console.log("Child clicked!")}>
+  <T.Mesh name="child" />
+</T.Mesh>
 ```
 
-## Performance Optimization
-
-`solid-three` provides several mechanisms to optimize rendering performance:
-
-### Automatic Resource Disposal
-
-`solid-three` automatically manages memory by disposing of three.js objects when components are removed from the scene:
-
-```tsx
-const AutoDisposedGeometry = () => {
-  return (
-    <T.Mesh>
-      {/* Geometry and material are automatically disposed when component unmounts */}
-      <T.BoxGeometry args={[1, 1, 1]} />
-      <T.MeshBasicMaterial color="red" />
-    </T.Mesh>
-  )
-}
-```
-
-**Manual disposal:** If you need custom disposal behavior, you can handle cleanup manually:
-
-```tsx
-const Boxes = () => {
-  const geometry = new BoxGeometry(1, 1, 1)
-  const material = new MeshBasicMaterial()
-
-  onCleanup(() => {
-    geometry.dispose()
-    material.dispose()
-  })
-
-  return <Index each={new Array(10)}>{() => <Mesh args={[geometry, material]} />}</Index>
-}
-```
-
-or use the [`autodispose()`-utility](#autodispose)
-
-```tsx
-const Boxes = () => {
-  const geometry = autodispose(new BoxGeometry(1, 1, 1))
-  const material = autodispose(new MeshBasicMaterial())
-
-  return <Index each={new Array(10)}>{() => <Mesh args={[geometry, material]} />}</Index>
-}
-```
-
-### Frame Loop Control
-
-Use the `frameloop` prop on Canvas to control when rendering occurs:
-
-```tsx
-// Only render on demand (when scene changes)
-<Canvas frameloop="demand">
-  {/* Your scene */}
-</Canvas>
-
-// Never render automatically (manual control)
-<Canvas frameloop="never">
-  {/* Your scene */}
-</Canvas>
-
-// Always render (default)
-<Canvas frameloop="always">
-  {/* Your scene */}
-</Canvas>
-```
-
-**Demand Rendering System:**
-
-When `frameloop="demand"` is set, `solid-three` automatically requests renders when:
-
-- Component props change
-- Scene graph structure changes (components added/removed)
-- Object transformations are updated (position, rotation, scale)
-- Material properties change
-
-This provides optimal performance by only rendering when necessary while maintaining reactivity.
-
-### Manual Rendering
-
-When using `frameloop="demand"` or `"never"`, you can manually trigger renders:
-
-```tsx
-const ManualRender = () => {
-  const three = useThree()
-
-  // Immediate render
-  const forceRender = () => three.render()
-
-  // Request render on next frame
-  const updateScene = () => three.requestRender()
-
-  return <T.Mesh onClick={updateScene} />
-}
-```
+([see](/playground/src/api/events/raycastable-prop.tsx))
 
 ## Contributing
 

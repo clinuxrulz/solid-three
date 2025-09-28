@@ -1,4 +1,4 @@
-import type { Accessor, JSX, Ref } from "solid-js"
+import type { Accessor, JSX } from "solid-js"
 import type {
   Clock,
   ColorRepresentation,
@@ -33,6 +33,8 @@ import type { Measure } from "./utils/use-measure.ts"
 
 export type AccessorMaybe<T> = T | Accessor<T>
 export type PromiseMaybe<T> = T | Promise<T>
+
+export type ClassInstance<T extends object> = T & { constructor: Function }
 
 /** Generic constructor. Returns instance of given type. Defaults to any. */
 export type Constructor<T = any> = new (...args: any[]) => T
@@ -307,7 +309,7 @@ export type Props<T> = Partial<
         children: JSX.Element
         key?: string
         onUpdate: (self: Meta<InstanceOf<T>>) => void
-        ref: Ref<Meta<InstanceOf<T>>>
+        ref: InstanceOf<T> | ((value: Meta<InstanceOf<T>>) => void)
         /**
          * Prevents the Object3D from being cast by the ray.
          * Object3D can still receive events via propagation from its descendants.

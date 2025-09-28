@@ -74,7 +74,8 @@
   "dependencies": {
     "@bigmistqke/solid-whenever": "^0.1.0",
     "@solid-primitives/resize-observer": "^2.0.25",
-    "debounce": "^2.1.0"
+    "debounce": "^2.1.0",
+    "vite-tsconfig-paths": "^5.1.4"
   },
   "devDependencies": {
     "@solidjs/router": "^0.15.3",

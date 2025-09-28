@@ -1,7 +1,9 @@
 import { defineConfig } from "vite"
 import inspect from "vite-plugin-inspect"
-import solidPlugin from "vite-plugin-solid"
+import solid from "vite-plugin-solid"
+import tsconfig from "vite-tsconfig-paths"
+
 export default defineConfig({
   base: "./",
-  plugins: [solidPlugin(), inspect()],
+  plugins: [tsconfig(), solid(), inspect()],
 })

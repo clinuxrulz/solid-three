@@ -215,7 +215,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
         ? // or a callback that returns a Renderer
           props.gl(canvas)
         : // if props.gl is not defined we default to a WebGLRenderer
-          new WebGLRenderer({ canvas })
+          new WebGLRenderer({ canvas, alpha: true })
 
     return meta(gl, {
       get props() {

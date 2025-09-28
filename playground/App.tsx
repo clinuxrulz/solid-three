@@ -1,84 +1,131 @@
 import { A, Route, Router } from "@solidjs/router"
-import type { ParentProps } from "solid-js"
+import { createSignal, For, lazy, type ParentProps } from "solid-js"
 import * as THREE from "three"
 import { Canvas, createT, Entity } from "../src/index.ts"
-import { EnvironmentExample } from "./examples/EnvironmentExample.tsx"
-import { GltfExample } from "./examples/Gltf.tsx"
-import { PortalExample } from "./examples/PortalExample.tsx"
-import { SolarExample } from "./examples/SolarExample.tsx"
 import "./index.css"
 
 const T = createT(THREE)
 
+// Vite glob imports
+const apiModules = import.meta.glob("./src/api/**/*.tsx") as Record<
+  string,
+  () => Promise<{ default: any }>
+>
+const exampleModules = import.meta.glob("./src/examples/*.tsx") as Record<
+  string,
+  () => Promise<{ default: any }>
+>
+
+// Create structured navigation
+const apiStructure = Object.keys(apiModules).reduce((acc, path) => {
+  const parts = path.split("/")
+  const category = parts[3] // api/category/file.tsx
+  const fileName = parts[4]?.replace(".tsx", "")
+
+  if (category && fileName) {
+    if (!acc[category]) acc[category] = []
+
+    acc[category].push({
+      name: fileName,
+      path: path.replace("./src", "").replace(".tsx", ""),
+      route: `/api/${category}/${fileName}`,
+    })
+  }
+
+  return acc
+}, {} as Record<string, Array<{ name: string; path: string; route: string }>>)
+
+Object.values(apiStructure).forEach(api => {
+  console.log(api.map(v => v.name))
+  api.sort((a, b) => (a.name === "usage" ? -1 : b.name === "usage" ? 1 : a.name < b.name ? -1 : 1))
+})
+
+const examplesList = Object.keys(exampleModules).map(path => {
+  const fileName = path.split("/").pop()?.replace(".tsx", "") || ""
+  return {
+    name: fileName,
+    path: path /* .replace("./examples/", "") */
+      .replace(".tsx", ""),
+    route: `/examples/${fileName}`,
+  }
+})
+
 function Layout(props: ParentProps) {
+  const [activeTab, setActiveTab] = createSignal<"api" | "examples">("api")
+
   return (
     <>
-      <nav
-        style={{
-          position: "absolute",
-          top: "10px",
-          left: "10px",
-          "z-index": 1000,
-          background: "rgba(0, 0, 0, 0.8)",
-          padding: "10px",
-          "border-radius": "8px",
-        }}
-      >
-        <A
-          href="/"
-          style={{
-            color: "white",
-            "text-decoration": "none",
-            padding: "5px 10px",
-            display: "block",
-          }}
+      <nav class="playground-nav">
+        {/* Tab Headers */}
+        <div role="tablist" class="nav-tablist">
+          <button
+            id="api-tab"
+            role="tab"
+            aria-selected={activeTab() === "api"}
+            aria-controls="api-panel"
+            tabindex={activeTab() === "api" ? 0 : -1}
+            onClick={() => setActiveTab("api")}
+            class="nav-tab"
+          >
+            API
+          </button>
+          <button
+            id="examples-tab"
+            role="tab"
+            aria-selected={activeTab() === "examples"}
+            aria-controls="examples-panel"
+            tabindex={activeTab() === "examples" ? 0 : -1}
+            onClick={() => setActiveTab("examples")}
+            class="nav-tab"
+          >
+            Examples
+          </button>
+        </div>
+
+        {/* API Tab Panel */}
+        <div
+          role="tabpanel"
+          id="api-panel"
+          aria-labelledby="api-tab"
+          hidden={activeTab() !== "api"}
+          class="nav-tabpanel"
         >
-          Home
-        </A>
-        <A
-          href="/simple-solar"
-          style={{
-            color: "white",
-            "text-decoration": "none",
-            padding: "5px 10px",
-            display: "block",
-          }}
+          <For each={Object.entries(apiStructure)}>
+            {([category, items]) => (
+              <div class="nav-category">
+                <h4 class="nav-category-title">{category}</h4>
+                <For each={items}>
+                  {item => (
+                    <A href={item.route} class="nav-item-link">
+                      {item.name
+                        .split("-")
+                        .map(value => `${value[0].toUpperCase()}${value.slice(1)}`)
+                        .join(" ")}
+                    </A>
+                  )}
+                </For>
+              </div>
+            )}
+          </For>
+        </div>
+
+        {/* Examples Tab Panel */}
+        <div
+          role="tabpanel"
+          id="examples-panel"
+          aria-labelledby="examples-tab"
+          hidden={activeTab() !== "examples"}
+          class="nav-tabpanel"
         >
-          Simple Solar
-        </A>
-        <A
-          href="/portal"
-          style={{
-            color: "white",
-            "text-decoration": "none",
-            padding: "5px 10px",
-            display: "block",
-          }}
-        >
-          Portal
-        </A>
-        <A
-          href="/environment"
-          style={{
-            color: "white",
-            "text-decoration": "none",
-            padding: "5px 10px",
-            display: "block",
-          }}
-        >
-          Environment
-        </A>
-        <A
-          href="/gltf"
-          style={{
-            color: "white",
-            "text-decoration": "none",
-            padding: "5px 10px",
-            display: "block",
-          }}
-        >
-          Gltf
-        </A>
+          <h4 class="nav-examples-title">Demo Examples</h4>
+          <For each={examplesList}>
+            {item => (
+              <A href={item.route} class="nav-example-link">
+                {item.name}
+              </A>
+            )}
+          </For>
+        </div>
       </nav>
       {props.children}
     </>
@@ -86,19 +133,25 @@ function Layout(props: ParentProps) {
 }
 
 export function App() {
-  return (
+  const router = (
     <Router root={Layout}>
-      <Route path="/simple-solar" component={SolarExample} />
-      <Route path="/portal" component={PortalExample} />
-      <Route path="/environment" component={EnvironmentExample} />
-      <Route path="/gltf" component={GltfExample} />
+      <For each={[...Object.entries(apiModules), ...Object.entries(exampleModules)]}>
+        {([route, component]) => (
+          <Route
+            path={route.replace("./src/", "").replace(".tsx", "")}
+            component={lazy(component)}
+          />
+        )}
+      </For>
+
+      {/* Home route */}
       <Route
         path="/"
         component={() => (
           <Canvas
             defaultCamera={{ position: new THREE.Vector3(0, 0, 15) }}
-            scene={{ background: [1, 0, 0] }}
-            style={{ width: "100vw", height: "100vh" }}
+            scene={{ background: [0.1, 0.1, 0.15] }}
+            class="home-canvas"
           >
             <Entity from={THREE.Group}>
               <T.Mesh>
@@ -106,9 +159,18 @@ export function App() {
                 <T.MeshBasicMaterial color="gray" />
               </T.Mesh>
             </Entity>
+
+            {/* Welcome text overlay */}
+            <div class="home-welcome">
+              <h1 class="home-title">solid-three Playground</h1>
+              <p class="home-subtitle">Interactive examples and API demonstrations</p>
+              <p class="home-description">Use the navigation panel to explore examples</p>
+            </div>
           </Canvas>
         )}
       />
     </Router>
   )
+  console.log(router.toArray())
+  return router
 }
