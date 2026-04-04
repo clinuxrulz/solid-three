@@ -9,7 +9,7 @@ import {
   type NoInfer,
   type SignalOptions,
   sharedConfig,
-  onMount,
+  createEffect,
   DEV,
   equalFn,
 } from "solid-js";
@@ -258,7 +258,7 @@ export function createHydratableSignal<T>(
   }
   if (sharedConfig.context) {
     const [state, setState] = createSignal(serverValue, options);
-    onMount(() => setState(() => update()));
+    createEffect(() => undefined, () => setState(() => update()));
     return [state, setState];
   }
   return createSignal(update(), options);

@@ -2,9 +2,7 @@ import {
   type Accessor,
   createContext,
   createMemo,
-  createResource,
-  mergeProps,
-  type Resource,
+  merge,
   useContext,
 } from "solid-js"
 import { type Loader } from "three"
@@ -187,8 +185,8 @@ export function useLoader<
   constructor: AccessorMaybe<Constructor<TLoader>>,
   url: AccessorMaybe<TInput>,
   options?: UseLoaderOptions<TLoader, TInput>,
-): Resource<LoadOutput<TLoader, TInput>> {
-  const config = mergeProps({ cache: true }, options)
+): Accessor<LoadOutput<TLoader, TInput>> {
+  const config = merge({ cache: true }, options)
 
   const loader = createMemo(() => {
     const _constructor = resolve(constructor)
@@ -210,34 +208,33 @@ export function useLoader<
    * @returns Promise resolving to the loaded resource
    * @internal
    */
-  function getOrInsert<TLoader extends Loader<any, any>, TInput extends LoadInput<TLoader>>(
+  async function getOrInsert<TLoader extends Loader<any, any>, TInput extends LoadInput<TLoader>>(
     registry: LoaderRegistry,
     loader: TLoader,
     input: TInput,
-  ): PromiseMaybe<LoadOutput<TLoader, TInput>> {
+  ): Promise<LoadOutput<TLoader, TInput>> {
     if (isRecord(input)) {
-      return awaitMapObject(input, value => getOrInsert(registry, loader, value)) as Promise<
-        LoadOutput<TLoader, TInput>
-      >
+      const result = await awaitMapObject(input, value => getOrInsert(registry, loader, value))
+      return result as any
     } else {
       const _input = input as LoaderUrl<TLoader>
 
       const cachedPromise = registry.get(loader, _input, false)
 
       if (cachedPromise) {
-        return cachedPromise
+        return cachedPromise as any
       }
 
-      const promise = load(loader, input)
-      registry.set(loader, input, promise)
+      const promise = load(loader, _input)
+      registry.set(loader, _input, promise as any)
 
-      return promise as Promise<LoadOutput<TLoader, TInput>>
+      return promise as any
     }
   }
 
   function loadUrl<TInput extends LoadInput<TLoader>>(
     url: TInput,
-  ): Promise<LoadOutput<TLoader, TInput>> {
+  ): PromiseMaybe<LoadOutput<TLoader, TInput>> {
     if (config.cache === true) {
       if (!useLoader.cache) {
         return load(loader(), url)
@@ -253,14 +250,17 @@ export function useLoader<
     return load(loader(), url)
   }
 
-  const [resource] = createResource(
-    () => [resolve(url), options?.base, loader()] as const,
-    async ([url, base, loader]) => {
-      config.onBeforeLoad?.(loader)
+  const resource = createMemo(
+    async () => {
+      const _url = resolve(url)
+      const _base = options?.base
+      const _loader = loader()
 
-      url = base ? resolveUrls(base, url) : url
+      config.onBeforeLoad?.(_loader)
 
-      const result = await loadUrl(url)
+      const resolvedUrl = _base ? resolveUrls(_base, _url) : _url
+
+      const result = await loadUrl(resolvedUrl)
 
       config.onLoad?.(result)
 

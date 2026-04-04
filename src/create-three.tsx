@@ -4,8 +4,9 @@ import {
   createMemo,
   createRenderEffect,
   createRoot,
-  mergeProps,
+  merge,
   onCleanup,
+  type JSX,
 } from "solid-js"
 import {
   ACESFilmicToneMapping,
@@ -69,7 +70,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
 
   const addFrameListener: FrameListener = (callback, options) => {
     return createRoot(dispose => {
-      createRenderEffect(() => {
+      createRenderEffect(() => undefined, () => {
         const { stage = "before", priority = 0 } = options ?? {}
 
         const listeners = frameListeners[stage]
@@ -115,7 +116,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
 
   // Handle frame behavior in WebXR
   const handleXRFrame: XRFrameRequestCallback = (timestamp: number, frame?: XRFrame) => {
-    if (canvasProps.frameloop === "never") return
+    if ((canvasProps.frameloop as string) === "never") return
     render(timestamp, frame)
   }
   // Toggle render switching on session
@@ -287,17 +288,20 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   /**********************************************************************************/
 
   withMultiContexts(() => {
-    createRenderEffect(() => {
-      if (props.frameloop === "never") {
-        context.clock.stop()
-        context.clock.elapsedTime = 0
-      } else {
-        context.clock.start()
-      }
-    })
+    createRenderEffect(
+      () => props.frameloop,
+      () => {
+        if (props.frameloop === "never") {
+          context.clock.stop()
+          context.clock.elapsedTime = 0
+        } else {
+          context.clock.start()
+        }
+      },
+    )
 
     // Manage camera
-    createRenderEffect(() => {
+    createRenderEffect(() => undefined, () => {
       if (cameraStack.peek()) return
       if (!props.defaultCamera || props.defaultCamera instanceof Camera) return
       useProps(defaultCamera, props.defaultCamera)
@@ -307,21 +311,21 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
     })
 
     // Manage scene
-    createRenderEffect(() => {
+    createRenderEffect(() => undefined, () => {
       if (!props.scene || props.scene instanceof Scene) return
       useProps(scene, props.scene)
     })
 
     // Manage raycaster
-    createRenderEffect(() => {
+    createRenderEffect(() => undefined, () => {
       if (!props.defaultRaycaster || props.defaultRaycaster instanceof Raycaster) return
       useProps(defaultRaycaster, props.defaultRaycaster)
     })
 
     // Manage gl
-    createRenderEffect(() => {
+    createRenderEffect(() => undefined, () => {
       // Set shadow-map
-      createRenderEffect(() => {
+      createRenderEffect(() => props.shadows, () => {
         const _gl = gl()
         if (_gl.shadowMap) {
           const oldEnabled = _gl.shadowMap.enabled
@@ -347,7 +351,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
         }
       })
 
-      createEffect(() => {
+      createEffect(() => undefined, () => {
         const renderer = gl()
         // Connect to xr if property exists
         if (renderer.xr) context.xr.connect()
@@ -384,7 +388,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
     pendingLoopRequest = requestAnimationFrame(loop)
     context.render(value)
   }
-  createRenderEffect(() => {
+  createRenderEffect(() => canvasProps.frameloop, () => {
     if (canvasProps.frameloop === "always") {
       pendingLoopRequest = requestAnimationFrame(loop)
     }
@@ -406,17 +410,21 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   /*                                                                                */
   /**********************************************************************************/
 
+  const Provider = eventContext as unknown as (props: { value: typeof addEventListener; children: JSX.Element }) => JSX.Element
+  const FrameProvider = frameContext as unknown as (props: { value: typeof addFrameListener; children: JSX.Element }) => JSX.Element
+  const ThreeProvider = threeContext as unknown as (props: { value: Context; children: JSX.Element }) => JSX.Element
+
   const c = children(() => (
-    <eventContext.Provider value={addEventListener}>
-      <frameContext.Provider value={addFrameListener}>
-        <threeContext.Provider value={context}>{canvasProps.children}</threeContext.Provider>
-      </frameContext.Provider>
-    </eventContext.Provider>
+    <Provider value={addEventListener}>
+      <FrameProvider value={addFrameListener}>
+        <ThreeProvider value={context}>{canvasProps.children}</ThreeProvider>
+      </FrameProvider>
+    </Provider>
   ))
 
   useSceneGraph(
     context.scene,
-    mergeProps(props, {
+    merge(props, {
       get children() {
         return c()
       },
@@ -425,5 +433,5 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
 
   // Return context merged with `addFrameListeners``
   // This is used in `@solid-three/testing`
-  return mergeProps(context, { addFrameListener })
+  return merge(context, { addFrameListener })
 }

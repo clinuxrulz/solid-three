@@ -1,5 +1,5 @@
 import { createResizeObserver } from "@solid-primitives/resize-observer"
-import { onMount, type JSX, type ParentProps, type Ref } from "solid-js"
+import { createEffect, type JSX, type ParentProps, type Ref } from "solid-js"
 import {
   Camera,
   OrthographicCamera,
@@ -59,7 +59,7 @@ export function Canvas(props: ParentProps<CanvasProps>) {
   let canvas: HTMLCanvasElement = null!
   let container: HTMLDivElement = null!
 
-  onMount(() => {
+  createEffect(() => undefined, () => {
     const context = createThree(canvas, props)
 
     // Resize observer for the canvas to adjust camera and renderer on size change

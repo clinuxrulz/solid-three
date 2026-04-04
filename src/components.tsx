@@ -3,8 +3,8 @@ import {
   Show,
   createEffect,
   createMemo,
-  mergeProps,
-  splitProps,
+  merge,
+  omit,
   type Accessor,
   type JSX,
   type JSXElement,
@@ -54,9 +54,8 @@ export function Portal<T extends Object3D>(props: PortalProps<T>) {
       return () =>
         withContext(
           () => props.children as unknown as Meta | Meta[],
-          // @ts-expect-error TODO: fix type-error
-          threeContext,
-          mergeProps(context, {
+          threeContext as any,
+          merge(context, {
             get scene() {
               return element()
             },
@@ -93,11 +92,11 @@ type EntityProps<T extends object | Constructor<object>> = Overwrite<
  * @returns The Three.js object wrapped as a JSX element, allowing it to be used within Solid's component system.
  */
 export function Entity<T extends object | Constructor<object>>(props: EntityProps<T>) {
-  const [config, rest] = splitProps(props, ["from", "args"])
+  const config = { from: props.from, args: props.args }
+  const rest = omit(props, "from", "args")
   const memo = whenMemo(
-    () => config.from,
+    () => props.from,
     from => {
-      // listen to key changes
       props.key
       const instance = meta(
         isConstructor(from) ? autodispose(new from(...(config.args ?? []))) : from,
@@ -182,24 +181,27 @@ type ResourceProps<TLoader extends Loader<object, any>> = UseLoaderOptions<
  * ```
  */
 export function Resource<const TLoader extends Loader<object, any>>(props: ResourceProps<TLoader>) {
-  const [options, config, rest] = splitProps(
+  const loader = () => props.loader
+  const url = () => props.url
+  const rest = omit(
     props,
-    ["base", "cache", "onBeforeLoad", "onLoad"],
-    ["loader", "url", "children"],
+    "base",
+    "cache",
+    "onBeforeLoad",
+    "onLoad",
+    "loader",
+    "url",
+    "children",
   )
 
-  const resource = useLoader(
-    () => config.loader,
-    () => config.url,
-    options,
-  )
+  const resource = useLoader(loader, url, props)
 
-  createEffect(() => console.log("resource", resource()))
+  createEffect(() => resource(), r => console.log("resource", r))
 
   useProps(resource, rest)
 
   return (
-    <Show when={"children" in config && resource()} fallback={resource()}>
+    <Show when={props.children && resource()} fallback={resource() as any}>
       {resource => props.children?.(resource)}
     </Show>
   )

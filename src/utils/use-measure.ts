@@ -1,5 +1,5 @@
 import { when, whenEffect } from "@bigmistqke/solid-whenever"
-import { createEffect, createMemo, createSignal, mergeProps, onCleanup } from "solid-js"
+import { createEffect, createMemo, createSignal, merge, onCleanup } from "solid-js"
 import { debounce as createDebounce } from "./debounce.ts"
 
 declare type ResizeObserverCallback = (entries: any[], observer: ResizeObserver) => void
@@ -32,7 +32,7 @@ export type UseMeasureOptions = {
 }
 
 export function useMeasure(options?: UseMeasureOptions) {
-  const config = mergeProps(
+  const config = merge(
     {
       debounce: 0,
       scroll: false,
@@ -105,13 +105,14 @@ export function useMeasure(options?: UseMeasureOptions) {
     }
   })
 
-  createEffect(() => {
+  createEffect(() => undefined, () => {
     const onScroll = getDebounce("scroll")
 
     createEffect(() => {
       if (!config.scroll) return
       globalThis.addEventListener("scroll", onScroll, { capture: true, passive: true })
-      onCleanup(() => globalThis.removeEventListener("scroll", onScroll, true))
+    }, () => {
+      globalThis.removeEventListener("scroll", onScroll, true)
     })
 
     whenEffect(scrollContainers, scrollContainers => {
@@ -132,7 +133,7 @@ export function useMeasure(options?: UseMeasureOptions) {
     })
   })
 
-  createEffect(() => {
+  createEffect(() => undefined, () => {
     const onResize = getDebounce("resize")
 
     globalThis.addEventListener("resize", onResize)

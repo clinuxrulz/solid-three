@@ -2,6 +2,7 @@ import { accessWith, isObject, type SetterParam } from "@solid-primitives/utils"
 import {
   type Accessor,
   batch,
+  createEffect,
   createMemo,
   createSignal,
   type EffectFunction,
@@ -9,7 +10,6 @@ import {
   getOwner,
   type MemoOptions,
   type NoInfer,
-  onMount,
   runWithOwner,
   sharedConfig,
   type Signal,
@@ -106,7 +106,7 @@ export function createHydratableStaticStore<T extends object>(
 
   if (sharedConfig.context) {
     const [state, setState] = createStaticStore(serverValue);
-    onMount(() => setState(update()));
+    createEffect(() => undefined, () => setState(update()));
     return [state, setState];
   }
 

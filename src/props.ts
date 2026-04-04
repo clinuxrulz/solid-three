@@ -1,12 +1,12 @@
 import {
   type Accessor,
   children,
-  createComputed,
+  createMemo,
   createRenderEffect,
   type JSXElement,
   mapArray,
   onCleanup,
-  splitProps,
+  omit,
   untrack,
 } from "solid-js"
 import {
@@ -48,7 +48,7 @@ function applySceneGraph(parent: object, child: object) {
 
   // Attach-prop can be a callback. It returns a cleanup-function.
   if (typeof attachProp === "function") {
-    const cleanup = attachProp(parent, child as Meta)
+    const cleanup = attachProp(parent, child as any)
     onCleanup(cleanup)
     return
   }
@@ -119,11 +119,11 @@ export const useSceneGraph = <T extends object>(
   props: { children?: JSXElement | JSXElement[]; onUpdate?(event: T): void },
 ) => {
   const c = children(() => props.children)
-  createComputed(
+  createMemo(
     mapArray(
       () => c.toArray() as unknown as (Meta<object> | undefined)[],
       _child =>
-        createComputed(() => {
+        createMemo(() => {
           const parent = resolve(_parent)
           if (!parent) return
           const child = resolve(_child)
@@ -258,20 +258,21 @@ function applyProp<T extends Record<string, any>>(
         source[type].format === RGBAFormat &&
         source[type].type === UnsignedByteType
       ) {
-        createRenderEffect(() => {
-          // Subscribe manually to linear and flat-prop.
-          context.props.linear
-          context.props.flat
-
-          const texture = source[type] as Texture
-
-          if (hasColorSpace(texture) && hasColorSpace(context.gl)) {
-            texture.colorSpace = context.gl.outputColorSpace
-          } else {
-            // @ts-expect-error TODO: fix type-error
-            texture.encoding = context.gl.outputEncoding
-          }
-        })
+        createRenderEffect(
+          () => {
+            context.props.linear
+            context.props.flat
+            return source[type] as Texture
+          },
+          texture => {
+            if (hasColorSpace(texture) && hasColorSpace(context.gl)) {
+              texture.colorSpace = context.gl.outputColorSpace
+            } else {
+              // @ts-expect-error TODO: fix type-error
+              texture.encoding = context.gl.outputEncoding
+            }
+          },
+        )
       }
     }
   } finally {
@@ -306,41 +307,45 @@ export function useProps<T extends Record<string, any>>(
   props: any,
   context: Pick<Context, "requestRender" | "gl" | "props"> = useThree(),
 ) {
-  const [local, instanceProps] = splitProps(props, ["ref", "args", "object", "attach", "children"])
+  const { ref, args, object, attach, children, ...instanceProps } = props
 
   useSceneGraph(accessor, props)
 
-  createRenderEffect(() => {
-    const object = resolve(accessor)
-
+  createRenderEffect(() => resolve(accessor), object => {
     if (!object) return
 
     // Assign ref
-    createRenderEffect(() => {
-      if (local.ref instanceof Function) local.ref(object)
-      else local.ref = object
+    createRenderEffect(() => undefined, () => {
+      if (props.ref instanceof Function) props.ref(object)
+      else props.ref = object
     })
 
     // Apply the props to THREE-instance
-    createRenderEffect(() => {
-      const keys = Object.keys(instanceProps)
-      for (const key of keys) {
-        // An array of sub-property-keys:
-        // p.ex in <T.Mesh position={} position-x={}/> position's subKeys will be ['position-x']
-        const subKeys = keys.filter(_key => key !== _key && _key.includes(key))
-        createRenderEffect(() => {
-          applyProp(context, object, key, props[key])
-          // If property updates, apply its sub-properties immediately after.
-          // NOTE:  Discuss - is this expected behavior? Feature or a bug?
-          //        Should it be according to order of update instead?
-          for (const subKey of subKeys) {
-            applyProp(context, object, subKey, props[subKey])
-          }
-        })
-      }
-
-      // NOTE: see "onUpdate should not update itself"-test
-      untrack(() => props.onUpdate)?.(object)
-    })
+    createRenderEffect(
+      () => {
+        const keys = Object.keys(instanceProps)
+        for (const key of keys) {
+          // An array of sub-property-keys:
+          // p.ex in <T.Mesh position={} position-x={}/> position's subKeys will be ['position-x']
+          const subKeys = keys.filter(_key => key !== _key && _key.includes(key))
+          createRenderEffect(
+            () => props[key],
+            () => {
+              applyProp(context, object, key, props[key])
+              // If property updates, apply its sub-properties immediately after.
+              // NOTE:  Discuss - is this expected behavior? Feature or a bug?
+              //        Should it be according to order of update instead?
+              for (const subKey of subKeys) {
+                applyProp(context, object, subKey, props[subKey])
+              }
+            },
+          )
+        }
+      },
+      () => {
+        // NOTE: see "onUpdate should not update itself"-test
+        untrack(() => props.onUpdate)?.(object)
+      },
+    )
   })
 }

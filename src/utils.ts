@@ -1,5 +1,5 @@
 import type { Accessor, Context, JSX } from "solid-js"
-import { createRenderEffect, mergeProps, onCleanup, type Ref } from "solid-js"
+import { createRenderEffect, merge, onCleanup, type Ref } from "solid-js"
 import {
   Camera,
   Loader,
@@ -173,8 +173,8 @@ type KeyOfOptionals<T> = keyof {
 export function defaultProps<
   const T,
   const TDefaults extends Partial<Required<Pick<T, KeyOfOptionals<T>>>>,
->(props: T, defaults: TDefaults): Prettify<TDefaults & Omit<T, keyof TDefaults>> {
-  return mergeProps(defaults, props)
+>(props: T, defaults: TDefaults): TDefaults & T {
+  return merge(props, defaults) as TDefaults & T
 }
 
 /**********************************************************************************/
@@ -226,7 +226,7 @@ export function resolve<T>(child: Accessor<T> | T, recursive = false): T {
     return child
   }
   if (typeof child === "function") {
-    const value = child()
+    const value = (child as () => T)()
     if (recursive) {
       return resolve(value)
     }
@@ -273,7 +273,7 @@ export function withContext<T, TResult>(
 ) {
   let result: TResult
 
-  context.Provider({
+  context({
     value,
     children: (() => {
       result = children()
@@ -319,7 +319,7 @@ export function withMultiContexts<TResult, T extends readonly [unknown?, ...unkn
   let result: TResult
   ;(values as [Context<any>, any]).reduce((acc, [context, value], index) => {
     return () =>
-      context.Provider({
+      context({
         value,
         children: () => {
           if (index === 0) result = acc()
@@ -350,7 +350,7 @@ export async function load<
   TInput extends LoadInput<TLoader>,
 >(loader: TLoader, input: TInput): Promise<LoadOutput<TLoader, TInput>> {
   if (isRecord(input)) {
-    return await awaitMapObject(input, path => load(loader, path))
+    return await awaitMapObject(input, path => load(loader, path)) as unknown as Promise<LoadOutput<TLoader, TInput>>
   }
   return new Promise((resolve, reject) => loader.load(input, resolve, undefined, reject))
 }
@@ -362,19 +362,21 @@ export async function load<
 /**********************************************************************************/
 
 export function useRef<T>(props: { ref?: Ref<T> }, value: T | Accessor<T>) {
-  createRenderEffect(() => {
-    const result =
+  createRenderEffect(
+    () =>
       typeof value === "function"
         ? // @ts-expect-error
           value()
-        : value
-    if (typeof props.ref === "function") {
-      // @ts-expect-error
-      props.ref(result)
-    } else {
-      props.ref = result
-    }
-  })
+        : value,
+    result => {
+      if (typeof props.ref === "function") {
+        // @ts-expect-error
+        props.ref(result)
+      } else {
+        props.ref = result
+      }
+    },
+  )
 }
 
 /**********************************************************************************/
