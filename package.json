@@ -30,6 +30,11 @@
     "test": "vitest",
     "types": "tsc --emitDeclarationOnly --declarationDir types"
   },
+  "pnpm": {
+    "overrides": {
+      "babel-preset-solid": "2.0.0-beta.3"
+    }
+  },
   "exports": {
     ".": {
       "solid": {
@@ -74,6 +79,7 @@
   "dependencies": {
     "@bigmistqke/solid-whenever": "workspace:*",
     "@solid-primitives/resize-observer": "workspace:*",
+    "@solidjs/web": "2.0.0-beta.4",
     "debounce": "^2.1.0",
     "vite-tsconfig-paths": "^5.1.4"
   },
@@ -83,6 +89,7 @@
     "@types/three": "^0.164.1",
     "@typescript-eslint/eslint-plugin": "^8.38.0",
     "@typescript-eslint/parser": "^8.38.0",
+    "babel-preset-solid": "2.0.0-beta.3",
     "dpdm": "^3.14.0",
     "esbuild": "^0.21.4",
     "esbuild-plugin-solid": "^0.6.0",

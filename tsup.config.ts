@@ -31,6 +31,7 @@ export default defineConfig(config => {
         entry: { [outFilename]: entry },
         treeshake: watching ? undefined : { preset: "safest" },
         replaceNodeEnv: true,
+        external: ["@solidjs/web"],
         esbuildOptions(options) {
           options.define = {
             ...options.define,
