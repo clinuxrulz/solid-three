@@ -13,6 +13,7 @@ import type {
   Context,
   FrameListener,
   LoaderUrl,
+  Meta,
   PromiseMaybe,
 } from "./types.ts"
 import {
@@ -31,6 +32,8 @@ import {
 /**********************************************************************************/
 
 export const frameContext = createContext<FrameListener>()
+
+export const parentContext = createContext<Meta<object> | undefined>(undefined)
 
 /**
  * Hook to register a callback that will be executed on each animation frame within the `<Canvas/>` component.

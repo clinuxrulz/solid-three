@@ -108,7 +108,7 @@ type EntityProps<T extends object | Constructor<object>> = Overwrite<
 export function Entity<T extends object | Constructor<object>>(props: EntityProps<T>) {
   const config = { from: props.from, args: props.args }
   const rest = omit(props, "from", "args")
-  const memo = whenMemo(
+  whenMemo(
     () => props.from,
     from => {
       props.key
@@ -119,10 +119,9 @@ export function Entity<T extends object | Constructor<object>>(props: EntityProp
         },
       ) as Meta<T>
       useProps(instance, rest)
-      return instance
     },
   )
-  return memo as unknown as JSX.Element
+  return null
 }
 
 /**********************************************************************************/

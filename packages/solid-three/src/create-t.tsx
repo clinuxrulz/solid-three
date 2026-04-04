@@ -1,4 +1,5 @@
-import { createMemo, type Component, type JSX } from "solid-js"
+import { createMemo, useContext, type Component } from "solid-js"
+import { parentContext, useThree } from "./hooks.ts"
 import { useProps } from "./props.ts"
 import type { Props } from "./types.ts"
 import { meta } from "./utils.ts"
@@ -15,36 +16,21 @@ export function createT<TCatalogue extends Record<string, unknown>>(catalogue: T
     [K in keyof TCatalogue]: Component<Props<TCatalogue[K]>>
   }>({} as any, {
     get: (_, name: string) => {
-      /* Create and memoize a wrapper component for the specified property. */
       if (!cache.has(name)) {
-        /* Try and find a constructor within the THREE namespace. */
         const constructor = catalogue[name]
-
-        /* If no constructor is found, return undefined. */
         if (!constructor) return undefined
-
-        /* Otherwise, create and memoize a component for that constructor. */
         cache.set(name, createEntity(constructor))
       }
-
       return cache.get(name)
     },
   })
 }
 
-/**
- * Creates an Entity-instance from a given source constructor.
- *
- * @template TConstructor The source constructor type.
- * @param Constructor - The constructor from which the component will be created.
- * @returns The created component.
- */
 export function createEntity<TConstructor>(
   Constructor: TConstructor,
 ): Component<Props<TConstructor>> {
   return (props: Props<TConstructor>) => {
-    const memo = createMemo(() => {
-      // listen to key changes
+    const obj = createMemo(() => {
       props.key
       try {
         return meta(new (Constructor as any)(...(props.args ?? [])), { props })
@@ -53,7 +39,13 @@ export function createEntity<TConstructor>(
         throw new Error("")
       }
     })
-    useProps(memo, props)
-    return memo as unknown as JSX.Element
+    
+    const parent = useContext(parentContext)
+    const context = useThree()
+    
+    useProps(obj, props, context, parent)
+    
+    const Provider = parentContext as any
+    return <Provider value={obj()}>{props.children}</Provider>
   }
 }

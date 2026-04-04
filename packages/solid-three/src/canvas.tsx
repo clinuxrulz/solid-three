@@ -1,4 +1,4 @@
-import { createEffect, type JSX, onCleanup, type ParentProps, type Ref } from "solid-js"
+import { createEffect, createSignal, Show, type JSX, onCleanup, type ParentProps, type Ref } from "solid-js"
 import { isServer } from "@solidjs/web"
 import {
   Camera,
@@ -58,32 +58,44 @@ export interface CanvasProps extends ParentProps<Partial<CanvasEventHandlers>> {
 export function Canvas(props: ParentProps<CanvasProps>) {
   let canvas: HTMLCanvasElement = null!
   let container: HTMLDivElement = null!
+  const [canvasSignal, setCanvasSignal] = createSignal<HTMLCanvasElement | null>(null)
+  const [sceneResult, setSceneResult] = createSignal<ReturnType<typeof createThree> | null>(null)
 
-  createEffect(() => undefined, () => {
-    const context = createThree(canvas, props)
+  createEffect(
+    () => {
+      const _canvas = canvasSignal()
+      if (!_canvas || !container) return undefined
+      return { _canvas, container }
+    },
+    (data) => {
+      if (!data) return
+      const { _canvas, container: _container } = data
+      const result = createThree(_canvas, props)
+      setSceneResult(() => result)
 
-    if (!isServer) {
-      const ro = new ResizeObserver(() => {
-        const { width, height } = container.getBoundingClientRect()
-        context.gl.setSize(width, height)
-        context.gl.setPixelRatio(globalThis.devicePixelRatio)
+      if (!isServer) {
+        const ro = new ResizeObserver(() => {
+          const { width, height } = _container.getBoundingClientRect()
+          result.gl.setSize(width, height)
+          result.gl.setPixelRatio(globalThis.devicePixelRatio)
 
-        if (context.camera instanceof OrthographicCamera) {
-          context.camera.left = width / -2
-          context.camera.right = width / 2
-          context.camera.top = height / 2
-          context.camera.bottom = height / -2
-        } else {
-          context.camera.aspect = width / height
-        }
+          if (result.camera instanceof OrthographicCamera) {
+            result.camera.left = width / -2
+            result.camera.right = width / 2
+            result.camera.top = height / 2
+            result.camera.bottom = height / -2
+          } else {
+            result.camera.aspect = width / height
+          }
 
-        context.camera.updateProjectionMatrix()
-        context.render(performance.now())
-      })
-      onCleanup(() => ro.disconnect())
-      ro.observe(container)
-    }
-  })
+          result.camera.updateProjectionMatrix()
+          result.render(performance.now())
+        })
+        onCleanup(() => ro.disconnect())
+        ro.observe(_container)
+      }
+    },
+  )
 
   return (
     <div
@@ -99,7 +111,13 @@ export function Canvas(props: ParentProps<CanvasProps>) {
       }}
       class={props.class}
     >
-      <canvas ref={canvas!} />
+      <canvas ref={el => { canvas = el; setCanvasSignal(el) }} />
+      <Show when={sceneResult()}>
+        {(resultAccessor) => {
+          const result = resultAccessor()
+          return <result.SceneGraph />
+        }}
+      </Show>
     </div>
   )
 }

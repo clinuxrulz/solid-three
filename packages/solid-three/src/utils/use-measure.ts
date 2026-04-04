@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, merge, onCleanup } from "solid-js"
+import { createEffect, createMemo, createRoot, createSignal, merge, onCleanup } from "solid-js"
 import { debounce as createDebounce } from "./debounce.ts"
 
 function resolve<T>(value: (() => T) | T): T {
@@ -14,24 +14,6 @@ function when<TValue, TResult>(
     const value = resolve(accessor)
     return value ? callback(value as NonNullable<TValue>) : fallback?.()!
   }
-}
-
-function whenEffect<TValue, TResult>(
-  accessor: (() => TValue) | TValue,
-  onTrack: (value: NonNullable<TValue>, prev: TResult | undefined) => TResult,
-  onApply?: (value: TResult) => (() => void) | void,
-): void {
-  let prev: TResult | undefined
-  createEffect(
-    () => {
-      const value = resolve(accessor) as NonNullable<TValue>
-      if (!value) return prev!
-      const result = onTrack(value, prev)
-      prev = result
-      return result
-    },
-    onApply || (() => {}),
-  )
 }
 
 declare type ResizeObserverCallback = (entries: any[], observer: ResizeObserver) => void
@@ -147,35 +129,42 @@ export function useMeasure(options?: UseMeasureOptions) {
       globalThis.removeEventListener("scroll", onScroll, true)
     })
 
-    whenEffect(scrollContainers, scrollContainers => {
-      if (!config.scroll) return
+    if (config.scroll) {
+      createRoot(dispose => {
+        const onScroll = getDebounce("scroll")
+        globalThis.addEventListener("scroll", onScroll, { capture: true, passive: true })
+        onCleanup(() => globalThis.removeEventListener("scroll", onScroll, true))
 
-      scrollContainers.forEach(scrollContainer =>
-        scrollContainer.addEventListener("scroll", onScroll, {
-          capture: true,
-          passive: true,
-        }),
-      )
-
-      onCleanup(() => {
-        scrollContainers.forEach(element => {
-          element.removeEventListener("scroll", onScroll, true)
+        createEffect(() => scrollContainers(), (containers) => {
+          containers.forEach(scrollContainer =>
+            scrollContainer.addEventListener("scroll", onScroll, {
+              capture: true,
+              passive: true,
+            }),
+          )
+          onCleanup(() => {
+            containers.forEach(element => {
+              element.removeEventListener("scroll", onScroll, true)
+            })
+          })
         })
+        return dispose
       })
-    })
+    }
   })
 
-  createEffect(() => undefined, () => {
+  createRoot(dispose => {
     const onResize = getDebounce("resize")
-
     globalThis.addEventListener("resize", onResize)
     onCleanup(() => globalThis.removeEventListener("resize", onResize))
 
-    whenEffect(element, element => {
+    createEffect(() => element(), (el) => {
+      if (!el) return
       const observer = new ResizeObserver(onResize)
-      observer.observe(element)
+      observer.observe(el)
       onCleanup(() => observer.disconnect())
     })
+    return dispose
   })
 
   return {

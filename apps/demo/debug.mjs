@@ -6,27 +6,76 @@ async function debug() {
   const page = await context.newPage();
 
   const errors = [];
+  const logs = [];
   page.on('console', msg => {
     if (msg.type() === 'error') {
       errors.push(`Console Error: ${msg.text()}`);
+    } else {
+      logs.push(`Console ${msg.type()}: ${msg.text()}`);
     }
   });
   page.on('pageerror', err => {
-    errors.push(`Page Error: ${err.message}`);
+    errors.push(`Page Error: ${err.message}\nStack: ${err.stack}`);
   });
 
   try {
-    console.log('Navigating to http://localhost:3001...');
-    await page.goto('http://localhost:3001', { waitUntil: 'networkidle', timeout: 30000 });
+    console.log('Navigating to http://localhost:3000...');
+    await page.goto('http://localhost:3000', { waitUntil: 'networkidle', timeout: 30000 });
     console.log('Page loaded successfully');
     
     const title = await page.title();
     console.log(`Page title: ${title}`);
     
-    const body = await page.textContent('body');
-    console.log(`Body content (first 500 chars): ${body?.substring(0, 500)}`);
+    await page.waitForTimeout(5000);
     
-    await page.waitForTimeout(2000);
+    // Get updated debug info after objects attach
+    const finalDebugInfo = await page.evaluate(() => window.__solidThreeDebug);
+    
+    const debugInfo = await page.evaluate(() => {
+      const canvas = document.querySelector('canvas');
+      if (!canvas) return { found: false };
+      
+      // Get scene info directly from the debug exposure
+      const sceneInfo = window.__solidThreeDebug;
+      
+      // Get renderer info from canvas dataset
+      const rendererInfo = canvas.dataset.engine || 'no engine info';
+      
+      // Check canvas dimensions
+      const rect = canvas.getBoundingClientRect();
+      
+      return {
+        found: true,
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height,
+        rectWidth: rect.width,
+        rectHeight: rect.height,
+        rendererInfo,
+        sceneInfo,
+      };
+    });
+    console.log('Debug info:', JSON.stringify(debugInfo, null, 2));
+    
+    // Check if scene has children
+    if (debugInfo.sceneInfo) {
+      console.log(`\n=== SCENE STATUS ===`);
+      console.log(`Scene type: ${debugInfo.sceneInfo.scene}`);
+      console.log(`Scene children: ${debugInfo.sceneInfo.sceneChildren}`);
+      console.log(`Camera: ${debugInfo.sceneInfo.camera}`);
+      
+      if (debugInfo.sceneInfo.sceneChildren === 0) {
+        console.log('\n⚠️  Scene has 0 children - 3D objects not being added!');
+      } else {
+        console.log('\n✅ Scene has children - 3D objects are being added!');
+      }
+    } else {
+      console.log('\n⚠️  No scene info available - DebugScene may not have run');
+    }
+    
+    if (logs.length > 0) {
+      console.log('\n=== CONSOLE LOGS ===');
+      logs.forEach(l => console.log(l));
+    }
     
     if (errors.length > 0) {
       console.log('\n=== ERRORS FOUND ===');

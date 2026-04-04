@@ -178,12 +178,20 @@ export function whenify(fn: Fn) {
 
 /**
  * Creates a memo that returns the result of the callback when the accessor's value is truthy.
+ * The truthiness check is memoized to avoid triggering reactivity on every value change.
  * @param accessor - The value or function returning a value to check for truthiness
  * @param callback - The callback function whose result will be memoized when the value is truthy
  * @param fallback - Optional callback function whose result will be memoized when the value is falsy
  * @returns A memoized accessor that returns the callback result when truthy, fallback result when falsy
  */
-export const whenMemo: WhenMemo = whenify(createMemo)
+export const whenMemo: WhenMemo = (accessor, callback, fallback) => {
+  const truthy = createMemo(() => !!resolve(accessor))
+  return createMemo(() => (...args) => {
+    if (!truthy()) return fallback ? fallback(...args) : undefined
+    const value = resolve(accessor) as NonNullable<any>
+    return callback(value, ...args)
+  })
+}
 
 /**
  * Creates an effect that runs when the accessor's value is truthy.
@@ -237,8 +245,16 @@ export function whenRenderEffect<TValue, TResult, TPrev = TResult>(
 
 /**
  * Creates a computed that runs the callback when the accessor's value is truthy.
+ * The truthiness check is memoized to avoid triggering reactivity on every value change.
  * @param accessor - The value or function returning a value to check for truthiness
  * @param callback - The callback function to execute in the computed when the value is truthy
  * @param fallback - Optional callback function to execute in the computed when the value is falsy
  */
-export const whenComputed: WhenMemo = whenify(createMemo)
+export const whenComputed: WhenMemo = (accessor, callback, fallback) => {
+  const truthy = createMemo(() => !!resolve(accessor))
+  return createMemo(() => (...args) => {
+    if (!truthy()) return fallback ? fallback(...args) : undefined
+    const value = resolve(accessor) as NonNullable<any>
+    return callback(value, ...args)
+  })
+}

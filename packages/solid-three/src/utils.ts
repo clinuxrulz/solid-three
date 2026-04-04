@@ -271,17 +271,8 @@ export function withContext<T, TResult>(
   context: Context<T>,
   value: T,
 ) {
-  let result: TResult
-
-  context({
-    value,
-    children: (() => {
-      result = children()
-      return ""
-    }) as any as JSX.Element,
-  })
-
-  return result!
+  const Provider = context as any
+  return (Provider as any)({ value, children }) as TResult
 }
 
 /**********************************************************************************/
@@ -318,8 +309,9 @@ export function withMultiContexts<TResult, T extends readonly [unknown?, ...unkn
 ) {
   let result: TResult
   ;(values as [Context<any>, any]).reduce((acc, [context, value], index) => {
+    const Provider = context as any
     return () =>
-      context({
+      (Provider as any)({
         value,
         children: () => {
           if (index === 0) result = acc()

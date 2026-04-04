@@ -1,12 +1,11 @@
 import {
+  For,
   type Accessor,
   children,
   createMemo,
   createRenderEffect,
   type JSXElement,
-  mapArray,
   onCleanup,
-  omit,
   untrack,
 } from "solid-js"
 import {
@@ -29,65 +28,60 @@ function isWritable(object: object, propertyName: string) {
   return Object.getOwnPropertyDescriptor(object, propertyName)?.writable
 }
 
-function applySceneGraph(parent: object, child: object) {
+function applySceneGraph(parent: object, child: object): (() => void) | undefined {
+  const cleanups: (() => void)[] = []
+
   const parentMeta = getMeta(parent)
   if (parentMeta) {
-    // Update parent's augmented children-property.
     parentMeta.children.add(child)
-    onCleanup(() => parentMeta.children.delete(child))
+    cleanups.push(() => parentMeta.children.delete(child))
   }
 
   const childMeta = getMeta(child)
   if (childMeta) {
-    // Update parent's augmented children-property.
     childMeta.parent = parent
-    onCleanup(() => (childMeta.parent = undefined))
+    cleanups.push(() => { childMeta.parent = undefined })
   }
 
   let attachProp = childMeta?.props.attach
 
-  // Attach-prop can be a callback. It returns a cleanup-function.
   if (typeof attachProp === "function") {
     const cleanup = attachProp(parent, child as any)
-    onCleanup(cleanup)
-    return
+    if (cleanup) cleanups.push(cleanup)
+    return () => cleanups.forEach(fn => fn())
   }
 
-  // Defaults for Material, BufferGeometry and Fog.
   if (!attachProp) {
     if (child instanceof Material) attachProp = "material"
     else if (child instanceof BufferGeometry) attachProp = "geometry"
     else if (child instanceof Fog) attachProp = "fog"
   }
 
-  // If an attachProp is defined, attach the child to the parent.
   if (attachProp) {
-    let target = parent
+    let target = parent as any
     let property: string | undefined
 
     const path = attachProp.split("-")
 
     while ((property = path.shift())) {
       if (path.length === 0) {
-        // @ts-expect-error TODO: fix type-error
         target[property] = child
-        // @ts-expect-error TODO: fix type-error
-        onCleanup(() => (target[property] = undefined))
+        const capturedTarget = target
+        const capturedProperty = property
+        cleanups.push(() => { capturedTarget[capturedProperty] = undefined })
         break
       } else {
-        // @ts-expect-error TODO: fix type-error
         target = target[property]
       }
     }
 
-    return
+    return () => cleanups.forEach(fn => fn())
   }
 
-  // If no attach-prop is defined, add the child to the parent.
   if (child instanceof Object3D && parent instanceof Object3D && !parent.children.includes(child)) {
     parent.add(child)
-    onCleanup(() => parent.remove(child))
-    return child
+    cleanups.push(() => parent.remove(child))
+    return () => cleanups.forEach(fn => fn())
   }
 
   console.error(
@@ -118,21 +112,40 @@ export const useSceneGraph = <T extends object>(
   _parent: AccessorMaybe<T | undefined>,
   props: { children?: JSXElement | JSXElement[]; onUpdate?(event: T): void },
 ) => {
-  const c = children(() => props.children)
-  createMemo(
-    mapArray(
-      () => c.toArray() as unknown as (Meta<object> | undefined)[],
-      _child =>
-        createMemo(() => {
-          const parent = resolve(_parent)
-          if (!parent) return
-          const child = resolve(_child)
-          if (!child) return
-          applySceneGraph(parent, child)
-          props.onUpdate?.(parent)
-        }),
-    ),
+  const childArray = createMemo(() => {
+    const rawChildren = props.children
+    if (!rawChildren) return []
+    const arr = Array.isArray(rawChildren) ? rawChildren : [rawChildren]
+    return arr as unknown as (Meta<object> | undefined)[]
+  })
+
+  let currentCleanups: (() => void)[] = []
+
+  createRenderEffect(
+    () => {
+      const parent = resolve(_parent)
+      const childs = childArray()
+      if (!parent) return undefined
+      return { parent, childs }
+    },
+    (data) => {
+      if (!data) return
+      const { parent, childs } = data
+
+      currentCleanups.forEach(fn => fn())
+      currentCleanups = []
+
+      for (const _child of childs) {
+        const child = resolve(_child)
+        if (!child) continue
+        const cleanup = applySceneGraph(parent, child)
+        if (cleanup) currentCleanups.push(cleanup)
+      }
+      props.onUpdate?.(parent)
+    },
   )
+
+  return () => currentCleanups.forEach(fn => fn())
 }
 
 /**********************************************************************************/
@@ -169,58 +182,6 @@ function applyProp<T extends Record<string, any>>(
   type: string,
   value: any,
 ) {
-  if (!source) {
-    console.error("error while applying prop", source, type, value)
-    return
-  }
-
-  // Ignore setting undefined props
-  if (value === undefined) return
-
-  /* If the key contains a hyphen, we're setting a sub property. */
-  if (type.indexOf("-") > -1) {
-    const [property, ...rest] = type.split("-")
-
-    applyProp(context, source[property], rest.join("-"), value)
-    return
-  }
-
-  if (NEEDS_UPDATE.includes(type) && ((!source[type] && value) || (source[type] && !value))) {
-    // @ts-expect-error
-    source.needsUpdate = true
-  }
-
-  // Alias (output)encoding => (output)colorSpace (since r152)
-  // https://github.com/pmndrs/react-three-fiber/pull/2829
-  if (hasColorSpace(source)) {
-    const sRGBEncoding = 3001
-    const SRGBColorSpace = "srgb"
-    const LinearSRGBColorSpace = "srgb-linear"
-
-    if (type === "encoding") {
-      type = "colorSpace"
-      value = value === sRGBEncoding ? SRGBColorSpace : LinearSRGBColorSpace
-    } else if (type === "outputEncoding") {
-      type = "outputColorSpace"
-      value = value === sRGBEncoding ? SRGBColorSpace : LinearSRGBColorSpace
-    }
-  }
-
-  if (isEventType(type)) {
-    if (source instanceof Object3D && hasMeta(source)) {
-      const cleanup = addToEventListeners(source, type)
-      onCleanup(cleanup)
-    } else {
-      console.error(
-        "Event handlers can only be added to Three elements extending from Object3D. Ignored event-type:",
-        type,
-        "from element",
-        source,
-      )
-    }
-    return
-  }
-
   const target = source[type]
 
   try {
@@ -301,51 +262,49 @@ function applyProp<T extends Record<string, any>>(
  * @param accessor - An accessor function that returns the target object to which properties will be applied.
  * @param props - An object containing the props to apply. This includes both direct properties
  *                and special properties like `ref` and `children`.
+ * @param context - The Three.js context (requestRender, gl, props).
+ * @param parent - Optional parent object for scene graph attachment. If provided, children will attach to this parent.
  */
 export function useProps<T extends Record<string, any>>(
   accessor: T | undefined | Accessor<T | undefined>,
   props: any,
-  context: Pick<Context, "requestRender" | "gl" | "props"> = useThree(),
+  context: Pick<Context, "requestRender" | "gl" | "props" | "setCamera"> = useThree(),
+  parent?: Meta<object>,
 ) {
-  const { ref, args, object, attach, children, ...instanceProps } = props
+  const objectRef = resolve(accessor)
+  if (!objectRef) return
 
-  useSceneGraph(accessor, props)
+  if (parent) {
+    applySceneGraph(parent, objectRef)
+  }
 
-  createRenderEffect(() => resolve(accessor), object => {
-    if (!object) return
+  if (props.ref instanceof Function) {
+    props.ref(objectRef)
+  } else {
+    props.ref = objectRef
+  }
 
-    // Assign ref
-    createRenderEffect(() => undefined, () => {
-      if (props.ref instanceof Function) props.ref(object)
-      else props.ref = object
-    })
+  if (props.makeDefault) {
+    context.setCamera?.(objectRef as any)
+  }
 
-    // Apply the props to THREE-instance
+  const keys = Object.keys(props).filter(k => !['children', 'ref', 'onUpdate', 'key', 'attach', 'args', 'makeDefault'].includes(k))
+  for (const key of keys) {
+    const subKeys = keys.filter(_key => key !== _key && _key.includes(key))
+    const capturedKey = key
     createRenderEffect(
-      () => {
-        const keys = Object.keys(instanceProps)
-        for (const key of keys) {
-          // An array of sub-property-keys:
-          // p.ex in <T.Mesh position={} position-x={}/> position's subKeys will be ['position-x']
-          const subKeys = keys.filter(_key => key !== _key && _key.includes(key))
-          createRenderEffect(
-            () => props[key],
-            () => {
-              applyProp(context, object, key, props[key])
-              // If property updates, apply its sub-properties immediately after.
-              // NOTE:  Discuss - is this expected behavior? Feature or a bug?
-              //        Should it be according to order of update instead?
-              for (const subKey of subKeys) {
-                applyProp(context, object, subKey, props[subKey])
-              }
-            },
-          )
+      (prevValue) => {
+        const value = props[capturedKey]
+        return value
+      },
+      (value) => {
+        applyProp(context, objectRef, capturedKey, value)
+        for (const subKey of subKeys) {
+          applyProp(context, objectRef, subKey, props[subKey])
         }
       },
-      () => {
-        // NOTE: see "onUpdate should not update itself"-test
-        untrack(() => props.onUpdate)?.(object)
-      },
     )
-  })
+  }
+
+  untrack(() => props.onUpdate)?.(objectRef)
 }

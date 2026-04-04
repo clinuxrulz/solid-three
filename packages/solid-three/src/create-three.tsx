@@ -27,7 +27,7 @@ import {
 import type { CanvasProps } from "./canvas.tsx"
 import { createEvents } from "./create-events.ts"
 import { Stack } from "./data-structure/stack.ts"
-import { frameContext, threeContext } from "./hooks.ts"
+import { frameContext, parentContext, threeContext } from "./hooks.ts"
 import { eventContext } from "./internal-context.ts"
 import { useProps, useSceneGraph } from "./props.ts"
 import { CursorRaycaster, type EventRaycaster } from "./raycasters.tsx"
@@ -69,34 +69,34 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   }
 
   const addFrameListener: FrameListener = (callback, options) => {
-    return createRoot(dispose => {
-      createRenderEffect(() => undefined, () => {
-        const { stage = "before", priority = 0 } = options ?? {}
+    createRenderEffect(() => undefined, () => {
+      const { stage = "before", priority = 0 } = options ?? {}
 
-        const listeners = frameListeners[stage]
+      const listeners = frameListeners[stage]
 
-        let array = listeners.map.get(priority)
+      let array = listeners.map.get(priority)
 
-        if (!array) {
-          array = []
-          listeners.map.set(priority, array)
-          const index = binarySearch(listeners.priorities, priority)
-          listeners.priorities.splice(index, 0, priority)
+      if (!array) {
+        array = []
+        listeners.map.set(priority, array)
+        const index = binarySearch(listeners.priorities, priority)
+        listeners.priorities.splice(index, 0, priority)
+      }
+
+      array.push(callback)
+
+      onCleanup(() => {
+        removeElementFromArray(array, callback)
+        if (array.length === 0) {
+          listeners.map.delete(priority)
+          listeners.priorities.splice(listeners.priorities.indexOf(priority), 1)
         }
-
-        array.push(callback)
-
-        onCleanup(() => {
-          removeElementFromArray(array, callback)
-          if (array.length === 0) {
-            listeners.map.delete(priority)
-            listeners.priorities.splice(listeners.priorities.indexOf(priority), 1)
-          }
-        })
       })
-
-      return dispose
     })
+
+    return () => {
+      // Cleanup will be handled by onCleanup above
+    }
   }
 
   function updateFrameListeners(stage: "before" | "after", delta: number, frame?: XRFrame) {
@@ -288,93 +288,78 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   /**********************************************************************************/
 
   withMultiContexts(() => {
-    createRenderEffect(
-      () => props.frameloop,
-      () => {
-        if (props.frameloop === "never") {
-          context.clock.stop()
-          context.clock.elapsedTime = 0
-        } else {
-          context.clock.start()
-        }
-      },
-    )
-
-    // Manage camera
-    createRenderEffect(() => undefined, () => {
-      if (cameraStack.peek()) return
-      if (!props.defaultCamera || props.defaultCamera instanceof Camera) return
-      useProps(defaultCamera, props.defaultCamera)
-      // NOTE:  Manually update camera's matrix with updateMatrixWorld is needed.
-      //        Otherwise casting a ray immediately after start-up will cause the incorrect matrix to be used.
-      defaultCamera().updateMatrixWorld(true)
-    })
-
-    // Manage scene
-    createRenderEffect(() => undefined, () => {
-      if (!props.scene || props.scene instanceof Scene) return
-      useProps(scene, props.scene)
-    })
-
-    // Manage raycaster
-    createRenderEffect(() => undefined, () => {
-      if (!props.defaultRaycaster || props.defaultRaycaster instanceof Raycaster) return
-      useProps(defaultRaycaster, props.defaultRaycaster)
-    })
-
-    // Manage gl
-    createRenderEffect(() => undefined, () => {
-      // Set shadow-map
-      createRenderEffect(() => props.shadows, () => {
-        const _gl = gl()
-        if (_gl.shadowMap) {
-          const oldEnabled = _gl.shadowMap.enabled
-          const oldType = _gl.shadowMap.type
-          _gl.shadowMap.enabled = !!props.shadows
-
-          if (typeof props.shadows === "boolean") {
-            _gl.shadowMap.type = PCFSoftShadowMap
-          } else if (typeof props.shadows === "string") {
-            const types = {
-              basic: BasicShadowMap,
-              percentage: PCFShadowMap,
-              soft: PCFSoftShadowMap,
-              variance: VSMShadowMap,
-            }
-            _gl.shadowMap.type = types[props.shadows] ?? PCFSoftShadowMap
-          } else if (typeof props.shadows === "object") {
-            Object.assign(_gl.shadowMap, props.shadows)
-          }
-
-          if (oldEnabled !== _gl.shadowMap.enabled || oldType !== _gl.shadowMap.type)
-            _gl.shadowMap.needsUpdate = true
-        }
-      })
-
-      createEffect(() => undefined, () => {
-        const renderer = gl()
-        // Connect to xr if property exists
-        if (renderer.xr) context.xr.connect()
-      })
-
-      // Set color space and tonemapping preferences
-      const LinearEncoding = 3000
-      const sRGBEncoding = 3001
-      // Color management and tone-mapping
-      useProps(gl, {
-        get outputEncoding() {
-          return props.linear ? LinearEncoding : sRGBEncoding
-        },
-        get toneMapping() {
-          return props.flat ? NoToneMapping : ACESFilmicToneMapping
-        },
-      })
-
-      // Manage props
-      if (props.gl && !(props.gl instanceof WebGLRenderer)) {
-        useProps(gl, props.gl)
+    createRenderEffect(() => props.frameloop, (frameloop) => {
+      if (frameloop === "never") {
+        context.clock.stop()
+        context.clock.elapsedTime = 0
+      } else {
+        context.clock.start()
       }
     })
+
+    if (!cameraStack.peek() && props.defaultCamera && !(props.defaultCamera instanceof Camera)) {
+      useProps(defaultCamera, props.defaultCamera)
+      defaultCamera().updateMatrixWorld(true)
+    }
+
+    if (!props.scene || props.scene instanceof Scene === false) {
+      useProps(scene, props.scene)
+    }
+
+    if (!props.defaultRaycaster || props.defaultRaycaster instanceof Raycaster === false) {
+      useProps(defaultRaycaster, props.defaultRaycaster)
+    }
+
+    createRenderEffect(() => {
+      const _gl = gl()
+      const shadows = props.shadows
+      return { _gl, shadows }
+    }, ({ _gl, shadows }) => {
+      if (_gl.shadowMap) {
+        const oldEnabled = _gl.shadowMap.enabled
+        const oldType = _gl.shadowMap.type
+        _gl.shadowMap.enabled = !!shadows
+
+        if (typeof shadows === "boolean") {
+          _gl.shadowMap.type = PCFSoftShadowMap
+        } else if (typeof shadows === "string") {
+          const types = {
+            basic: BasicShadowMap,
+            percentage: PCFShadowMap,
+            soft: PCFSoftShadowMap,
+            variance: VSMShadowMap,
+          }
+          _gl.shadowMap.type = types[shadows] ?? PCFSoftShadowMap
+        } else if (typeof shadows === "object") {
+          Object.assign(_gl.shadowMap, shadows)
+        }
+
+        if (oldEnabled !== _gl.shadowMap.enabled || oldType !== _gl.shadowMap.type)
+          _gl.shadowMap.needsUpdate = true
+      }
+    })
+
+    createEffect(() => {
+      const renderer = gl()
+      return renderer.xr ? true : false
+    }, (hasXR) => {
+      if (hasXR) context.xr.connect()
+    })
+
+    const LinearEncoding = 3000
+    const sRGBEncoding = 3001
+    useProps(gl, {
+      get outputEncoding() {
+        return props.linear ? LinearEncoding : sRGBEncoding
+      },
+      get toneMapping() {
+        return props.flat ? NoToneMapping : ACESFilmicToneMapping
+      },
+    })
+
+    if (props.gl && !(props.gl instanceof WebGLRenderer)) {
+      useProps(gl, props.gl)
+    }
   }, [[threeContext, context]])
 
   /**********************************************************************************/
@@ -388,8 +373,8 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
     pendingLoopRequest = requestAnimationFrame(loop)
     context.render(value)
   }
-  createRenderEffect(() => canvasProps.frameloop, () => {
-    if (canvasProps.frameloop === "always") {
+  createRenderEffect(() => canvasProps.frameloop, (frameloop) => {
+    if (frameloop === "always") {
       pendingLoopRequest = requestAnimationFrame(loop)
     }
     onCleanup(() => pendingLoopRequest && cancelAnimationFrame(pendingLoopRequest))
@@ -401,7 +386,6 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   /*                                                                                */
   /**********************************************************************************/
 
-  // Initialize event-system
   const { addEventListener } = createEvents(context)
 
   /**********************************************************************************/
@@ -413,25 +397,21 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   const Provider = eventContext as unknown as (props: { value: typeof addEventListener; children: JSX.Element }) => JSX.Element
   const FrameProvider = frameContext as unknown as (props: { value: typeof addFrameListener; children: JSX.Element }) => JSX.Element
   const ThreeProvider = threeContext as unknown as (props: { value: Context; children: JSX.Element }) => JSX.Element
+  const ParentProvider = parentContext as unknown as (props: { value: typeof scene extends () => infer R ? R : never; children: JSX.Element }) => JSX.Element
 
-  const c = children(() => (
-    <Provider value={addEventListener}>
-      <FrameProvider value={addFrameListener}>
-        <ThreeProvider value={context}>{canvasProps.children}</ThreeProvider>
-      </FrameProvider>
-    </Provider>
-  ))
+  function SceneGraph() {
+    return (
+      <Provider value={addEventListener}>
+        <FrameProvider value={addFrameListener}>
+          <ParentProvider value={scene()}>
+            <ThreeProvider value={context}>
+              {canvasProps.children}
+            </ThreeProvider>
+          </ParentProvider>
+        </FrameProvider>
+      </Provider>
+    )
+  }
 
-  useSceneGraph(
-    context.scene,
-    merge(props, {
-      get children() {
-        return c()
-      },
-    }),
-  )
-
-  // Return context merged with `addFrameListeners``
-  // This is used in `@solid-three/testing`
-  return merge(context, { addFrameListener })
+  return { SceneGraph, ...merge(context, { addFrameListener }) }
 }
