@@ -1,6 +1,5 @@
 import {
   type Accessor,
-  createComputed,
   createEffect,
   createMemo,
   createRenderEffect,
@@ -64,13 +63,10 @@ interface WhenMemo {
 }
 
 interface Effect {
-  <const TValue, TPrevious, TFallback>(
+  <const TValue, TResult, TPrev = TResult>(
     accessor: MaybeAccessor<TValue>,
-    callback: (
-      value: InferNonNullable<TValue>,
-      previous: TPrevious | TFallback | undefined,
-    ) => TPrevious,
-    fallback?: (previous: TPrevious | TFallback | undefined) => TFallback,
+    onTrack: (value: NonNullable<TValue>, prev: TPrev | undefined) => TResult,
+    onApply?: (value: TResult) => (() => void) | void,
   ): void
 }
 
@@ -190,20 +186,54 @@ export function whenify(fn: Fn) {
 export const whenMemo: WhenMemo = whenify(createMemo)
 
 /**
- * Creates an effect that runs the callback when the accessor's value is truthy.
+ * Creates an effect that runs when the accessor's value is truthy.
+ * Uses Solid 2's split effect pattern (compute → apply).
  * @param accessor - The value or function returning a value to check for truthiness
- * @param callback - The callback function to execute in the effect when the value is truthy
- * @param fallback - Optional callback function to execute in the effect when the value is falsy
+ * @param onTrack - Function to compute a value from the tracked reactive expression, receives previous value
+ * @param onApply - Function to perform side effects with the computed value, can return cleanup
  */
-export const whenEffect: Effect = whenify(createEffect)
+export function whenEffect<TValue, TResult, TPrev = TResult>(
+  accessor: MaybeAccessor<TValue>,
+  onTrack: (value: NonNullable<TValue>, prev: TPrev | undefined) => TResult,
+  onApply?: (value: TResult) => (() => void) | void,
+): void {
+  let prev: TPrev | undefined
+  createEffect(
+    (): TResult | undefined => {
+      const value = resolve(accessor) as NonNullable<TValue>
+      if (!value) return undefined
+      const result = onTrack(value, prev)
+      prev = result as unknown as TPrev
+      return result
+    },
+    onApply,
+  )
+}
 
 /**
- * Creates a render effect that runs the callback when the accessor's value is truthy.
+ * Creates a render effect that runs when the accessor's value is truthy.
+ * Uses Solid 2's split effect pattern (compute → apply).
  * @param accessor - The value or function returning a value to check for truthiness
- * @param callback - The callback function to execute in the render effect when the value is truthy
- * @param fallback - Optional callback function to execute in the render effect when the value is falsy
+ * @param onTrack - Function to compute a value from the tracked reactive expression, receives previous value
+ * @param onApply - Function to perform side effects with the computed value, can return cleanup
  */
-export const whenRenderEffect: Effect = whenify(createRenderEffect)
+export function whenRenderEffect<TValue, TResult, TPrev = TResult>(
+  accessor: MaybeAccessor<TValue>,
+  onTrack: (value: NonNullable<TValue>, prev: TPrev | undefined) => TResult,
+  onApply?: (value: TResult) => (() => void) | void,
+): void {
+  let prev: TPrev | undefined
+  createRenderEffect(
+    (): TResult | undefined => {
+      const value = resolve(accessor) as NonNullable<TValue>
+      if (!value) return undefined
+      const result = onTrack(value, prev)
+      prev = result as unknown as TPrev
+      return result
+    },
+    onApply,
+  )
+}
 
 /**
  * Creates a computed that runs the callback when the accessor's value is truthy.
@@ -211,4 +241,4 @@ export const whenRenderEffect: Effect = whenify(createRenderEffect)
  * @param callback - The callback function to execute in the computed when the value is truthy
  * @param fallback - Optional callback function to execute in the computed when the value is falsy
  */
-export const whenComputed: Effect = whenify(createComputed)
+export const whenComputed: WhenMemo = whenify(createMemo)
