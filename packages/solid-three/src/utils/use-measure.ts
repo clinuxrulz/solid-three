@@ -1,6 +1,38 @@
-import { when, whenEffect } from "@bigmistqke/solid-whenever"
 import { createEffect, createMemo, createSignal, merge, onCleanup } from "solid-js"
 import { debounce as createDebounce } from "./debounce.ts"
+
+function resolve<T>(value: (() => T) | T): T {
+  return typeof value === "function" ? (value as () => T)() : value
+}
+
+function when<TValue, TResult>(
+  accessor: (() => TValue) | TValue,
+  callback: (value: NonNullable<TValue>) => TResult,
+  fallback?: () => TResult,
+): () => TResult {
+  return () => {
+    const value = resolve(accessor)
+    return value ? callback(value as NonNullable<TValue>) : fallback?.()!
+  }
+}
+
+function whenEffect<TValue, TResult>(
+  accessor: (() => TValue) | TValue,
+  onTrack: (value: NonNullable<TValue>, prev: TResult | undefined) => TResult,
+  onApply?: (value: TResult) => (() => void) | void,
+): void {
+  let prev: TResult | undefined
+  createEffect(
+    () => {
+      const value = resolve(accessor) as NonNullable<TValue>
+      if (!value) return prev!
+      const result = onTrack(value, prev)
+      prev = result
+      return result
+    },
+    onApply || (() => {}),
+  )
+}
 
 declare type ResizeObserverCallback = (entries: any[], observer: ResizeObserver) => void
 declare class ResizeObserver {

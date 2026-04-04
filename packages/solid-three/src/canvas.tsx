@@ -1,5 +1,5 @@
-import { createResizeObserver } from "@solid-primitives/resize-observer"
-import { createEffect, type JSX, type ParentProps, type Ref } from "solid-js"
+import { createEffect, type JSX, onCleanup, type ParentProps, type Ref } from "solid-js"
+import { isServer } from "@solidjs/web"
 import {
   Camera,
   OrthographicCamera,
@@ -62,24 +62,27 @@ export function Canvas(props: ParentProps<CanvasProps>) {
   createEffect(() => undefined, () => {
     const context = createThree(canvas, props)
 
-    // Resize observer for the canvas to adjust camera and renderer on size change
-    createResizeObserver(container, function onResize() {
-      const { width, height } = container.getBoundingClientRect()
-      context.gl.setSize(width, height)
-      context.gl.setPixelRatio(globalThis.devicePixelRatio)
+    if (!isServer) {
+      const ro = new ResizeObserver(() => {
+        const { width, height } = container.getBoundingClientRect()
+        context.gl.setSize(width, height)
+        context.gl.setPixelRatio(globalThis.devicePixelRatio)
 
-      if (context.camera instanceof OrthographicCamera) {
-        context.camera.left = width / -2
-        context.camera.right = width / 2
-        context.camera.top = height / 2
-        context.camera.bottom = height / -2
-      } else {
-        context.camera.aspect = width / height
-      }
+        if (context.camera instanceof OrthographicCamera) {
+          context.camera.left = width / -2
+          context.camera.right = width / 2
+          context.camera.top = height / 2
+          context.camera.bottom = height / -2
+        } else {
+          context.camera.aspect = width / height
+        }
 
-      context.camera.updateProjectionMatrix()
-      context.render(performance.now())
-    })
+        context.camera.updateProjectionMatrix()
+        context.render(performance.now())
+      })
+      onCleanup(() => ro.disconnect())
+      ro.observe(container)
+    }
   })
 
   return (

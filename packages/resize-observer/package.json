@@ -25,6 +25,6 @@
     "@solidjs/web": "2.0.0-beta.4"
   },
   "peerDependencies": {
-    "solid-js": "*"
+    "solid-js": "2.0.0-beta.4"
   }
 }

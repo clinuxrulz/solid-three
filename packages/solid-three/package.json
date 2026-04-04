@@ -77,11 +77,8 @@
     }
   },
   "dependencies": {
-    "@bigmistqke/solid-whenever": "workspace:*",
-    "@solid-primitives/resize-observer": "workspace:*",
     "@solidjs/web": "2.0.0-beta.4",
-    "debounce": "^2.1.0",
-    "vite-tsconfig-paths": "^5.1.4"
+    "debounce": "^2.1.0"
   },
   "devDependencies": {
     "@solidjs/router": "^0.15.3",
@@ -119,7 +116,7 @@
   },
   "peerDependencies": {
     "@types/three": "*",
-    "solid-js": "*",
+    "solid-js": "2.0.0-beta.4",
     "three": "*"
   },
   "jest": {

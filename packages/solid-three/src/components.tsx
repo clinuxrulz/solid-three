@@ -1,4 +1,3 @@
-import { whenMemo } from "@bigmistqke/solid-whenever"
 import {
   Show,
   createEffect,
@@ -10,6 +9,21 @@ import {
   type JSXElement,
   type ParentProps,
 } from "solid-js"
+
+function whenMemo<TValue, TResult>(
+  accessor: (() => TValue) | TValue,
+  callback: (value: NonNullable<TValue>, previous: TResult | undefined) => TResult,
+  fallback?: (previous: TResult | undefined) => TResult,
+): () => TResult {
+  let prev: TResult | undefined
+  return () => {
+    const value = typeof accessor === "function" ? (accessor as () => TValue)() : accessor
+    if (!value) return fallback ? fallback(prev)! : (prev as TResult)
+    const result = callback(value as NonNullable<TValue>, prev)
+    prev = result
+    return result
+  }
+}
 import { Loader, Object3D } from "three"
 import { threeContext, useLoader, useThree, type UseLoaderOptions } from "./hooks.ts"
 import { useProps } from "./props.ts"
