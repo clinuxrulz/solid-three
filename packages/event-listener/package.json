@@ -1,0 +1,26 @@
+{
+  "name": "@solid-primitives/event-listener",
+  "version": "2.4.5",
+  "description": "SolidJS Primitives to manage creating event listeners.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsup"
+  },
+  "dependencies": {
+    "@solid-primitives/utils": "workspace:*"
+  },
+  "peerDependencies": {
+    "solid-js": "*"
+  }
+}

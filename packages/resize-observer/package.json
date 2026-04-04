@@ -1,0 +1,29 @@
+{
+  "name": "@solid-primitives/resize-observer",
+  "version": "2.1.5",
+  "description": "Reactive primitives for observing resizing of HTML elements.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsup"
+  },
+  "dependencies": {
+    "@solid-primitives/event-listener": "workspace:*",
+    "@solid-primitives/rootless": "workspace:*",
+    "@solid-primitives/static-store": "workspace:*",
+    "@solid-primitives/utils": "workspace:*"
+  },
+  "peerDependencies": {
+    "solid-js": "*"
+  }
+}
