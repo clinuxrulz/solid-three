@@ -1,12 +1,10 @@
 import { accessWith, isObject, type SetterParam } from "@solid-primitives/utils";
 import {
   type Accessor,
-  batch,
   createEffect,
   createMemo,
   createSignal,
   type EffectFunction,
-  getListener,
   getOwner,
   type MemoOptions,
   type NoInfer,
@@ -15,7 +13,7 @@ import {
   type Signal,
   untrack,
 } from "solid-js";
-import { isServer } from "solid-js/web";
+import { isServer } from "@solidjs/web";
 
 export type StaticStoreSetter<T extends object> = {
   (setter: (prev: T) => Partial<T>): T;
@@ -54,7 +52,6 @@ export function createStaticStore<T extends object>(
   const getValue = (key: keyof T): T[keyof T] => {
     let signal = cache[key];
     if (!signal) {
-      if (!getListener()) return copy[key];
       cache[key] = signal = createSignal(copy[key], { internal: true });
       delete copy[key];
     }
@@ -78,9 +75,7 @@ export function createStaticStore<T extends object>(
         const entries = untrack(
           () => Object.entries(accessWith(a, store) as Partial<T>) as [any, any][],
         );
-        batch(() => {
-          for (const [key, value] of entries) setValue(key, () => value);
-        });
+        for (const [key, value] of entries) setValue(key, () => value);
       } else setValue(a, b);
       return store;
     },
@@ -156,7 +151,6 @@ export function createDerivedStaticStore<T extends object>(
       get() {
         let keyMemo = cache[key];
         if (!keyMemo) {
-          if (!getListener()) return fnMemo()[key];
           runWithOwner(o, () => (cache[key] = keyMemo = createMemo(() => fnMemo()[key])));
         }
         return keyMemo!();

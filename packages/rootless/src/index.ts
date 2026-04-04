@@ -8,10 +8,9 @@ import {
   type Accessor,
   createSignal,
   type Signal,
-  batch,
   type Setter,
 } from "solid-js";
-import { isServer } from "solid-js/web";
+import { isServer } from "@solidjs/web";
 import {
   type AnyFunction,
   asArray,
@@ -310,10 +309,8 @@ export function createRootPool<TArg, TResult>(
     if (length) {
       root = pool[--length]!;
       pool[length] = undefined!;
-      batch(() => {
-        root.set(() => arg);
-        root.setA(true);
-      });
+      root.set(() => arg);
+      root.setA(true);
     } else root = createRoot(dispose => mapRoot(dispose, createSignal(arg)), owner);
 
     onCleanup(() => cleanupRoot(root));

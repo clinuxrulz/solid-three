@@ -9,12 +9,15 @@
   },
   "dependencies": {
     "@solidjs/web": "2.0.0-beta.4",
-    "solid-three": "workspace:*",
+    "solid-js": "2.0.0-beta.4",
+    "solid-three": "workspace:solid-three",
     "three": "^0.164.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/three": "^0.164.1",
     "babel-preset-solid": "2.0.0-beta.3",
+    "playwright": "^1.59.1",
     "typescript": "^5.7.2",
     "vite": "^7.1.4",
     "vite-plugin-solid": "3.0.0-next.3"

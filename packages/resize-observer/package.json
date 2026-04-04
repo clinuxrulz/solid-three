@@ -21,7 +21,8 @@
     "@solid-primitives/event-listener": "workspace:*",
     "@solid-primitives/rootless": "workspace:*",
     "@solid-primitives/static-store": "workspace:*",
-    "@solid-primitives/utils": "workspace:*"
+    "@solid-primitives/utils": "workspace:*",
+    "@solidjs/web": "2.0.0-beta.4"
   },
   "peerDependencies": {
     "solid-js": "*"

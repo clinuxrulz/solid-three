@@ -11,9 +11,10 @@ import {
   sharedConfig,
   createEffect,
   DEV,
-  equalFn,
 } from "solid-js";
-import { isServer } from "solid-js/web";
+import { isEqual } from "@solidjs/signals";
+const equalFn = isEqual;
+import { isServer } from "@solidjs/web";
 import type {
   AnyClass,
   MaybeAccessor,

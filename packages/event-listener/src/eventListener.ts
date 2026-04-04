@@ -7,7 +7,7 @@ import {
   tryOnCleanup,
 } from "@solid-primitives/utils";
 import { type Accessor, createEffect, createRenderEffect, createSignal } from "solid-js";
-import { isServer } from "solid-js/web";
+import { isServer } from "@solidjs/web";
 import type {
   EventListenerDirectiveProps,
   EventMapOf,
@@ -116,11 +116,20 @@ export function createEventListener(
     });
   };
 
-  // if the target is an accessor the listeners will be added on the first effect (onMount)
-  // so that when passed a jsx ref it will be availabe
-  if (typeof targets === "function") createEffect(attachListeners);
-  // if the target prop is NOT an accessor, the event listeners can be added right away
-  else createRenderEffect(attachListeners);
+  if (typeof targets === "function") {
+    createEffect(() => {
+      const t = access(targets);
+      asArray(t).forEach(el => {
+        if (el) asArray(access(type)).forEach(type => makeEventListener(el, type, handler, options));
+      });
+    });
+  } else {
+    createRenderEffect(() => {
+      asArray(access(targets)).forEach(el => {
+        if (el) asArray(access(type)).forEach(type => makeEventListener(el, type, handler, options));
+      });
+    });
+  }
 }
 
 // Possible targets prop shapes:

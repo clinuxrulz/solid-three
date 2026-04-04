@@ -17,6 +17,10 @@
   "scripts": {
     "build": "tsup"
   },
+  "dependencies": {
+    "@solidjs/signals": "^0.13.9",
+    "@solidjs/web": "2.0.0-beta.4"
+  },
   "peerDependencies": {
     "solid-js": "*"
   }

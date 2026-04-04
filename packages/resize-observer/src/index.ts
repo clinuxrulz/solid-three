@@ -10,8 +10,8 @@ import {
   noop,
   filterNonNullable,
 } from "@solid-primitives/utils";
-import { type Accessor, createEffect, onCleanup, sharedConfig } from "solid-js";
-import { isServer } from "solid-js/web";
+import { type Accessor, createMemo, createEffect, onCleanup, sharedConfig, untrack } from "solid-js";
+import { isServer } from "@solidjs/web";
 
 type ResizeObserverEntryGeneric<T extends Element> = ResizeObserverEntry & { readonly target: T };
 type ResizeObserverCallbackGeneric<T extends Element> = (
@@ -88,11 +88,14 @@ export function createResizeObserver<T extends Element>(
       }
     }, options);
 
-  createEffect((prev: T[]) => {
-    const refs = filterNonNullable(asArray(access(targets)));
-    handleDiffArray(refs, prev, observe, unobserve);
-    return refs;
-  }, []);
+  let prevRefs: readonly T[] = [];
+  const refsMemo = createMemo(() => filterNonNullable(asArray(access(targets))));
+
+  createEffect(() => {
+    const refs = refsMemo();
+    handleDiffArray(refs, prevRefs, observe, unobserve);
+    prevRefs = refs;
+  });
 }
 
 const WINDOW_SIZE_FALLBACK = { width: 0, height: 0 } as const satisfies Size;

@@ -196,8 +196,6 @@ export function Resource<const TLoader extends Loader<object, any>>(props: Resou
 
   const resource = useLoader(loader, url, props)
 
-  createEffect(() => resource(), r => console.log("resource", r))
-
   useProps(resource, rest)
 
   return (
