@@ -241,8 +241,8 @@ function applyProp<T extends Record<string, any>>(
       // @ts-expect-error
       source.needsUpdate = true
     }
-    if (context.props.frameloop === "demand") {
-      context.requestRender()
+    if (untrack(() => context.props.frameloop) === "demand") {
+      untrack(() => context.requestRender())
     }
   }
 }

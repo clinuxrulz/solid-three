@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createRoot, createSignal, merge, onCleanup } from "solid-js"
+import { createEffect, createMemo, createRoot, createSignal, merge, onCleanup, untrack } from "solid-js"
 import { debounce as createDebounce } from "./debounce.ts"
 
 function resolve<T>(value: (() => T) | T): T {
@@ -178,7 +178,7 @@ export function useMeasure(options?: UseMeasureOptions) {
   return {
     setElement: (source: HTMLOrSVGElement | null) => {
       if (!source || source === element()) return
-      setElement(source)
+      queueMicrotask(() => untrack(() => setElement(source)))
     },
     bounds,
     forceRefresh,

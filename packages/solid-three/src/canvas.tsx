@@ -1,4 +1,4 @@
-import { createEffect, createSignal, Show, type JSX, onCleanup, type ParentProps, type Ref } from "solid-js"
+import { createEffect, createSignal, untrack, Show, type JSX, onCleanup, type ParentProps, type Ref } from "solid-js"
 import { isServer } from "@solidjs/web"
 import {
   Camera,
@@ -70,8 +70,8 @@ export function Canvas(props: ParentProps<CanvasProps>) {
     (data) => {
       if (!data) return
       const { _canvas, container: _container } = data
-      const result = createThree(_canvas, props)
-      setSceneResult(() => result)
+      const result = untrack(() => createThree(_canvas, props))
+      untrack(() => setSceneResult(result))
 
       if (!isServer) {
         const ro = new ResizeObserver(() => {

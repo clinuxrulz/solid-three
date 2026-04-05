@@ -6,6 +6,7 @@ import {
   createRoot,
   merge,
   onCleanup,
+  untrack,
   type JSX,
 } from "solid-js"
 import {
@@ -220,7 +221,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   })
 
   const measure = useMeasure()
-  measure.setElement(canvas)
+  untrack(() => measure.setElement(canvas))
 
   const defaultTarget = new Vector3()
   const viewport = createMemo(() =>
