@@ -91,8 +91,8 @@ export function Canvas(props: ParentProps<CanvasProps>) {
           result.camera.updateProjectionMatrix()
           result.render(performance.now())
         })
-        onCleanup(() => ro.disconnect())
         ro.observe(_container)
+        return () => ro.disconnect()
       }
     },
   )

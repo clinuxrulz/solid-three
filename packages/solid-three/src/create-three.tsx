@@ -49,7 +49,8 @@ import { useMeasure } from "./utils/use-measure.ts"
  * and rendering loop based on the provided properties.
  */
 export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
-  const canvasProps = defaultProps(props, { frameloop: "always" })
+  return createRoot(() => {
+    const canvasProps = defaultProps(props, { frameloop: "always" })
 
   /**********************************************************************************/
   /*                                                                                */
@@ -69,33 +70,27 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   }
 
   const addFrameListener: FrameListener = (callback, options) => {
-    createRenderEffect(() => undefined, () => {
-      const { stage = "before", priority = 0 } = options ?? {}
+    const { stage = "before", priority = 0 } = options ?? {}
 
-      const listeners = frameListeners[stage]
+    const listeners = frameListeners[stage]
 
-      let array = listeners.map.get(priority)
+    let array = listeners.map.get(priority)
 
-      if (!array) {
-        array = []
-        listeners.map.set(priority, array)
-        const index = binarySearch(listeners.priorities, priority)
-        listeners.priorities.splice(index, 0, priority)
-      }
+    if (!array) {
+      array = []
+      listeners.map.set(priority, array)
+      const index = binarySearch(listeners.priorities, priority)
+      listeners.priorities.splice(index, 0, priority)
+    }
 
-      array.push(callback)
-
-      onCleanup(() => {
-        removeElementFromArray(array, callback)
-        if (array.length === 0) {
-          listeners.map.delete(priority)
-          listeners.priorities.splice(listeners.priorities.indexOf(priority), 1)
-        }
-      })
-    })
+    array.push(callback)
 
     return () => {
-      // Cleanup will be handled by onCleanup above
+      removeElementFromArray(array, callback)
+      if (array.length === 0) {
+        listeners.map.delete(priority)
+        listeners.priorities.splice(listeners.priorities.indexOf(priority), 1)
+      }
     }
   }
 
@@ -162,7 +157,6 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
     if (pendingRenderRequest) return
     pendingRenderRequest = requestAnimationFrame(render)
   }
-  onCleanup(() => pendingRenderRequest && cancelAnimationFrame(pendingRenderRequest))
 
   /**********************************************************************************/
   /*                                                                                */
@@ -377,7 +371,12 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
     if (frameloop === "always") {
       pendingLoopRequest = requestAnimationFrame(loop)
     }
-    onCleanup(() => pendingLoopRequest && cancelAnimationFrame(pendingLoopRequest))
+    return () => {
+      if (pendingLoopRequest) {
+        cancelAnimationFrame(pendingLoopRequest)
+        pendingLoopRequest = undefined
+      }
+    }
   })
 
   /**********************************************************************************/
@@ -414,4 +413,5 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
   }
 
   return { SceneGraph, ...merge(context, { addFrameListener }) }
+  })
 }

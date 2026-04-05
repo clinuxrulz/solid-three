@@ -278,10 +278,10 @@ export function useProps<T extends Record<string, any>>(
     applySceneGraph(parent, objectRef)
   }
 
-  if (props.ref instanceof Function) {
+  if (typeof props.ref === "function") {
     props.ref(objectRef)
-  } else {
-    props.ref = objectRef
+  } else if (props.ref && typeof props.ref === "object" && "current" in props.ref) {
+    props.ref.current = objectRef
   }
 
   if (props.makeDefault) {
