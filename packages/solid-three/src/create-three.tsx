@@ -323,7 +323,7 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
             soft: PCFSoftShadowMap,
             variance: VSMShadowMap,
           }
-          _gl.shadowMap.type = types[shadows] ?? PCFSoftShadowMap
+          _gl.shadowMap.type = (types as any)[shadows] ?? PCFSoftShadowMap
         } else if (typeof shadows === "object") {
           Object.assign(_gl.shadowMap, shadows)
         }

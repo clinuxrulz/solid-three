@@ -119,7 +119,7 @@ export function useMeasure(options?: UseMeasureOptions) {
     }
   })
 
-  createEffect(() => undefined, () => {
+  createRoot(dispose => {
     const onScroll = getDebounce("scroll")
 
     createEffect(
@@ -142,14 +142,14 @@ export function useMeasure(options?: UseMeasureOptions) {
         onCleanup(() => globalThis.removeEventListener("scroll", onScroll, true))
 
         createEffect(() => scrollContainers(), (containers) => {
-          containers.forEach(scrollContainer =>
+          containers.forEach((scrollContainer: Element) =>
             scrollContainer.addEventListener("scroll", onScroll, {
               capture: true,
               passive: true,
             }),
           )
           return () => {
-            containers.forEach(element => {
+            containers.forEach((element: Element) => {
               element.removeEventListener("scroll", onScroll, true)
             })
           }
@@ -157,6 +157,8 @@ export function useMeasure(options?: UseMeasureOptions) {
         return dispose
       })
     }
+
+    onCleanup(dispose)
   })
 
   createRoot(dispose => {
@@ -170,7 +172,7 @@ export function useMeasure(options?: UseMeasureOptions) {
       observer.observe(el)
       return () => observer.disconnect()
     })
-    return dispose
+    onCleanup(dispose)
   })
 
   return {
