@@ -22,6 +22,21 @@ function RotatingCube() {
   )
 }
 
+function CameraDebug() {
+  const { camera } = useThree()
+  const [aspect, setAspect] = createSignal(0)
+  const [pos, setPos] = createSignal('')
+  
+  useFrame(() => {
+    setAspect(camera.aspect)
+    setPos(`${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)}`)
+  })
+  
+  return (
+    <div id="camera-debug" data-aspect={aspect()} data-pos={pos()} />
+  )
+}
+
 export function App() {
   const [count, setCount] = createSignal(0)
   const [rotate, setRotate] = createSignal(true)
@@ -33,7 +48,7 @@ export function App() {
         <p>Counter: {count()}</p>
         <p>Rotation: {rotate() ? 'ON' : 'OFF'}</p>
         <div style={{ "margin-top": '8px' }}>
-          <button onClick={() => setCount(c => c + 1)} style={{ marginRight: '8px' }}>
+          <button onClick={() => setCount(c => c + 1)} style={{ "margin-right": '8px' }}>
             Increment
           </button>
           <button onClick={() => setRotate(r => !r)}>
@@ -50,6 +65,8 @@ export function App() {
 
           <T.AmbientLight intensity={0.5} />
           <T.DirectionalLight position={[5, 5, 5]} intensity={1} />
+          
+          <CameraDebug />
         </Canvas>
       </div>
     </div>

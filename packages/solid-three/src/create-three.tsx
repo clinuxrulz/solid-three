@@ -413,6 +413,6 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
     )
   }
 
-  return { SceneGraph, ...merge(context, { addFrameListener }) }
+  return merge({ SceneGraph, addFrameListener }, context)
   })
 }

@@ -308,14 +308,14 @@ export function withMultiContexts<TResult, T extends readonly [unknown?, ...unkn
   },
 ) {
   let result: TResult
-  ;(values as [Context<any>, any]).reduce((acc, [context, value], index) => {
+  ;(values as [Context<any>, any]).reduce((acc, [context, value]) => {
     const Provider = context as any
     return () =>
       (Provider as any)({
         value,
         children: () => {
-          if (index === 0) result = acc()
-          else acc()
+          const r = (acc as () => any)()
+          if (r) result = r
         },
       })
   }, children)()
