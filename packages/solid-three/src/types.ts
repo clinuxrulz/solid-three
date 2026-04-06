@@ -297,6 +297,22 @@ export type MapToRepresentation<T> = {
   [TKey in keyof T]: Representation<T[TKey]>
 }
 
+/** Camera-specific props that should only be available on camera components */
+type CameraProps = {
+  /** Makes this camera the default camera for the scene */
+  makeDefault?: boolean
+}
+
+/** Check if T is a camera type */
+type IsCamera<T> = T extends PerspectiveCamera ? true 
+  : T extends OrthographicCamera ? true 
+  : false
+
+/** Props with camera-specific props conditionally added */
+export type PropsWithCamera<T> = IsCamera<T> extends true 
+  ? Props<T> & Partial<CameraProps>
+  : Props<T>
+
 /** Generic `solid-three` props of a given class. */
 export type Props<T> = Partial<
   Overwrite<

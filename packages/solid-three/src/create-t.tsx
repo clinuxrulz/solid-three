@@ -1,7 +1,7 @@
 import { createMemo, untrack, useContext, type Component } from "solid-js"
 import { parentContext, useThree } from "./hooks.ts"
 import { useProps } from "./props.ts"
-import type { Props } from "./types.ts"
+import type { PropsWithCamera } from "./types.ts"
 import { meta } from "./utils.ts"
 
 /**********************************************************************************/
@@ -13,7 +13,7 @@ import { meta } from "./utils.ts"
 export function createT<TCatalogue extends Record<string, unknown>>(catalogue: TCatalogue) {
   const cache = new Map<string, Component<any>>()
   return new Proxy<{
-    [K in keyof TCatalogue]: Component<Props<TCatalogue[K]>>
+    [K in keyof TCatalogue]: Component<PropsWithCamera<TCatalogue[K]>>
   }>({} as any, {
     get: (_, name: string) => {
       if (!cache.has(name)) {
@@ -28,8 +28,8 @@ export function createT<TCatalogue extends Record<string, unknown>>(catalogue: T
 
 export function createEntity<TConstructor>(
   Constructor: TConstructor,
-): Component<Props<TConstructor>> {
-  return (props: Props<TConstructor>) => {
+): Component<PropsWithCamera<TConstructor>> {
+  return (props: PropsWithCamera<TConstructor>) => {
     const obj = createMemo(() => {
       props.key
       try {
