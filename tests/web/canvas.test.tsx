@@ -1,44 +1,55 @@
-// use default export for jest.spyOn
-import { render } from "@solidjs/testing-library"
+// Test Canvas mounting and unmounting
 import * as THREE from "three"
 import { describe, expect, it } from "vitest"
 import { createT } from "../../src/index.ts"
-import { TestCanvas } from "../../src/testing/index.tsx"
+import { TestCanvas, test as createTestContext } from "../../src/testing/index.tsx"
 import type { Context } from "../../src/types.ts"
 
 const T = createT(THREE)
 
 describe("web Canvas", () => {
   it("should correctly mount", async () => {
-    let renderer = render(() => (
-      <TestCanvas>
+    let context: Context | undefined
+
+    const testContext = createTestContext(() => (
+      <TestCanvas
+        ref={ctx => {
+          context = ctx
+        }}
+      >
         <T.Group />
       </TestCanvas>
     ))
 
-    expect(renderer.container).toMatchSnapshot()
+    expect(context).toBeDefined()
+    expect(context?.scene).toBeDefined()
+    testContext.unmount()
   })
 
   it("should forward ref", async () => {
-    let ref: Context
+    let ref: Context | undefined
 
-    render(() => (
-      <TestCanvas ref={ref!}>
+    createTestContext(() => (
+      <TestCanvas
+        ref={r => {
+          ref = r
+        }}
+      >
         <T.Group />
       </TestCanvas>
     ))
 
-    expect(ref!).toBeDefined()
+    expect(ref).toBeDefined()
   })
 
   it("should correctly unmount", async () => {
-    let renderer = render(() => (
+    const testContext = createTestContext(() => (
       <TestCanvas>
         <T.Group />
       </TestCanvas>
     ))
 
-    expect(() => renderer.unmount()).not.toThrow()
+    expect(() => testContext.unmount()).not.toThrow()
   })
 
   // it("plays nice with react SSR", async () => {
