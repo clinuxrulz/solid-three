@@ -18,7 +18,7 @@ export default defineConfig({
       name: 'chromium',
     },
     setupFiles: ['./vitest.setup.ts'],
-    // Exclude Playwright test files and renderer tests (too heavy for current setup)
+    // Exclude renderer tests (need Solid 2.0 reactive rewrites to work)
     exclude: ['**/node_modules/**', '**/dist/**', '**/*.spec.ts', 'tests/core/renderer.test.tsx'],
     include: ['tests/**/*.test.{ts,tsx}'],
     coverage: {
