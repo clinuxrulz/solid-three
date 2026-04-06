@@ -59,16 +59,15 @@ export const isEventType = (type: string): type is EventName =>
 function createThreeEvent<
   TEvent extends Event,
   TConfig extends { stoppable?: boolean; intersections?: Array<Intersection> },
->(nativeEvent: TEvent, { stoppable = true, intersections }: TConfig = {}) {
-  const event: Record<string, any> = stoppable
-    ? {
-        nativeEvent,
-        stopped: false,
-        stopPropagation() {
-          event.stopped = true
-        },
-      }
-    : { nativeEvent }
+>(nativeEvent: TEvent, config: TConfig = {} as TConfig) {
+  const { stoppable = true, intersections } = config
+  const event: Record<string, any> = {
+    nativeEvent,
+    stopped: false,
+    stopPropagation() {
+      event.stopped = true
+    },
+  }
 
   if (intersections) {
     event.intersections = intersections
@@ -85,7 +84,7 @@ function createThreeEvent<
               ? true
               : false
             : true
-          intersections: TConfig["intersections"] extends Intersection[] ? true : false
+          intersections: TConfig["stoppable"] extends Intersection[] ? true : false
         }
       >,
       "currentIntersection"
@@ -128,7 +127,7 @@ function raycast<TNativeEvent extends MouseEvent | WheelEvent>(
     stack.push(...object.children)
   }
 
-  return context.raycaster.intersectObjects(nodeSet.values().toArray(), false)
+  return context.raycaster.intersectObjects(nodeSet.values().toArray(), false) as any
 }
 
 /**********************************************************************************/
@@ -186,6 +185,7 @@ function createMissableEventRegistry(
       // Remove currentIntersection
       // @ts-expect-error TODO: fix type-error
       delete stoppableEvent.currentIntersection
+      // @ts-expect-error TODO: fix type-error
       context.props[type]?.(stoppableEvent)
     }
 
@@ -377,7 +377,8 @@ function createDefaultEventRegistry(
     eventNameMap[type],
     nativeEvent => {
       const intersections = raycast(context, registry.array, nativeEvent)
-      const event = createThreeEvent(nativeEvent, { intersections })
+      if (intersections.length === 0) return
+      const event = createThreeEvent(nativeEvent, { intersections: intersections as any, stoppable: true })
 
       for (const intersection of intersections) {
         // Update currentIntersection

@@ -1,4 +1,4 @@
-import { createMemo, useContext, type Component } from "solid-js"
+import { createMemo, untrack, useContext, type Component } from "solid-js"
 import { parentContext, useThree } from "./hooks.ts"
 import { useProps } from "./props.ts"
 import type { Props } from "./types.ts"
@@ -40,10 +40,12 @@ export function createEntity<TConstructor>(
       }
     })
     
-    const parent = useContext(parentContext)
-    const context = useThree()
-    
-    useProps(obj, props, context, parent)
+    // Access context inside createMemo where reactive root is established
+    createMemo(() => {
+      const context = useThree()
+      const parent = useContext<any>(parentContext)
+      useProps(obj, props, context, parent)
+    })
     
     const Provider = parentContext as any
     return <Provider value={obj()}>{props.children}</Provider>

@@ -292,8 +292,8 @@ export function createThree(canvas: HTMLCanvasElement, props: CanvasProps) {
       }
     })
 
-    if (!cameraStack.peek() && props.defaultCamera && !(props.defaultCamera instanceof Camera)) {
-      useProps(defaultCamera, props.defaultCamera)
+    if (!cameraStack.peek() && canvasProps.defaultCamera && !(canvasProps.defaultCamera instanceof Camera)) {
+      useProps(defaultCamera, canvasProps.defaultCamera)
       defaultCamera().updateMatrixWorld(true)
     }
 

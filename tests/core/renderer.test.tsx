@@ -4,7 +4,7 @@ import {
   createSignal,
   For,
   onCleanup,
-  onMount,
+  onSettled,
   Show,
 } from "solid-js"
 import * as THREE from "three"
@@ -297,7 +297,7 @@ describe("renderer", () => {
     const log: string[] = []
     // @ts-expect-error TODO: fix type-error
     const Log = props => {
-      onMount(() => log.push("mount " + props.name))
+      onSettled(() => log.push("mount " + props.name))
       onCleanup(() => log.push("unmount " + props.name))
       log.push("render " + props.name)
       return <T.Group />

@@ -288,6 +288,11 @@ export function test(
   if (isBrowser) {
     // Browser environment: render to DOM
     const container = document.createElement("div")
+    container.style.width = "1280px"
+    container.style.height = "800px"
+    container.style.position = "absolute"
+    container.style.top = "0"
+    container.style.left = "0"
     document.body.appendChild(container)
     container.appendChild(canvas)
 
@@ -303,13 +308,20 @@ export function test(
             get children() {
               return children()
             },
-            camera: {
+            defaultCamera: {
               position: [0, 0, 5] as [number, number, number],
             },
           },
           props,
         ),
       )
+      
+      // Set camera aspect based on canvas dimensions
+      const camera = context.camera
+      if ('aspect' in camera) {
+        camera.aspect = canvas.width / canvas.height
+        camera.updateProjectionMatrix()
+      }
       
       // Render the scene graph to the DOM
       render(() => context.SceneGraph(), container)
@@ -325,7 +337,7 @@ export function test(
             get children() {
               return children()
             },
-            camera: {
+            defaultCamera: {
               position: [0, 0, 5] as [number, number, number],
             },
           },

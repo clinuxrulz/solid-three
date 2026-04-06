@@ -45,6 +45,9 @@ describe("Camera aspect ratio in render", () => {
     }
 
     const testScene = test(() => <ComponentWithMonitor />)
+    
+    // Wait for component to fully mount
+    await testScene.waitTillNextFrame()
 
     const canvas = testScene.canvas as HTMLCanvasElement
     const expectedAspect = canvas.width / canvas.height

@@ -206,6 +206,20 @@ function applyProp<T extends Record<string, any>>(
         target.set(value)
       }
     }
+    // Handle event handlers
+    else if (isEventType(type)) {
+      if (source instanceof Object3D && hasMeta(source)) {
+        const cleanup = addToEventListeners(source, type)
+        onCleanup(cleanup)
+      } else {
+        console.error(
+          "Event handlers can only be added to Three elements extending from Object3D. Ignored event-type:",
+          type,
+          "from element",
+          source,
+        )
+      }
+    }
     // Else, just overwrite the value
     else {
       // @ts-expect-error TODO: fix type-error
