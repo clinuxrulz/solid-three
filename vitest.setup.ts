@@ -502,13 +502,36 @@ class WebGL2RenderingContextMock {
   getError() { return 0 } // GL_NO_ERROR
   activeTexture() {}
   getActiveAttrib() { return null }
-  getActiveUniform() { return null }
-  getAttachedShaders() { return [] }
-  getExtension() { return null }
-  getSupportedExtensions() { return [] }
-  getVertexAttrib() { return null }
-  getVertexAttribOffset() { return 0 }
-}
+   getActiveUniform() { return null }
+   getAttachedShaders() { return [] }
+   getExtension() { return null }
+   getSupportedExtensions() { return [] }
+   getVertexAttrib() { return null }
+   getVertexAttribOffset() { return 0 }
+   
+   // Additional WebGL methods required by Three.js
+   getContextAttributes() {
+     return {
+       alpha: true,
+       antialias: true,
+       depth: true,
+       failIfMajorPerformanceCaveat: false,
+       powerPreference: 'default',
+       premultipliedAlpha: true,
+       preserveDrawingBuffer: false,
+       stencil: false,
+       desynchronized: false,
+     }
+   }
+   
+   getShaderPrecisionFormat() {
+     return {
+       rangeMin: 127,
+       rangeMax: 127,
+       precision: 23,
+     }
+   }
+ }
 
 // ResizeObserver polyfill for node environment
 if (typeof globalThis !== 'undefined' && typeof (globalThis as any).ResizeObserver === 'undefined') {

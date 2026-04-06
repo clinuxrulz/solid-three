@@ -1,4 +1,5 @@
-import { type Accessor, type JSX, createRoot, merge } from "solid-js"
+import { type Accessor, type JSX, createRoot, createSignal, merge } from "solid-js"
+import { render } from "@solidjs/web"
 import type { CanvasProps } from "../canvas.tsx"
 import { createThree } from "../create-three.tsx"
 import { useRef } from "../utils.ts"
@@ -226,38 +227,39 @@ class WebGL2RenderingContextMock {
   uniformMatrix3x2fv() {}
   uniformMatrix3x4fv() {}
   uniformMatrix4x2fv() {}
-  uniformMatrix4x3fv() {}
-  uniformBlockBinding() {}
-  getUniformBlockIndex() { return 0 }
-  bindSampler() {}
-  createSampler() { return {} }
-  deleteSampler() {}
-  samplerParameterf() {}
-  samplerParameteri() {}
-  getSamplerParameter() { return 0 }
-  createTransformFeedback() { return {} }
-  deleteTransformFeedback() {}
-  bindTransformFeedback() {}
-  beginTransformFeedback() {}
-  endTransformFeedback() {}
-  transformFeedbackVaryings() {}
-  getTransformFeedbackVarying() { return null }
-  createQuery() { return {} }
-  deleteQuery() {}
-  getQueryParameter() { return 0 }
-  getQuery() { return null }
-  beginQuery() {}
-  endQuery() {}
-  queryCounter() {}
-  hint() {}
-  lineWidth() {}
-  getError() { return 0 }
-  activeTexture() {}
-  getActiveAttrib() { return null }
-  getActiveUniform() { return null }
-  getAttachedShaders() { return [] }
-  getVertexAttrib() { return null }
-  getVertexAttribOffset() { return 0 }
+   uniformMatrix4x3fv() {}
+   uniformBlockBinding() {}
+   getUniformBlockIndex() { return 0 }
+   bindSampler() {}
+   createSampler() { return {} }
+   deleteSampler() {}
+   samplerParameterf() {}
+   samplerParameteri() {}
+   getSamplerParameter() { return 0 }
+   createTransformFeedback() { return {} }
+   deleteTransformFeedback() {}
+   bindTransformFeedback() {}
+   beginTransformFeedback() {}
+   endTransformFeedback() {}
+   transformFeedbackVaryings() {}
+   getTransformFeedbackVarying() { return null }
+   createQuery() { return {} }
+   deleteQuery() {}
+   getQueryParameter() { return 0 }
+   getQuery() { return null }
+   beginQuery() {}
+   endQuery() {}
+   queryCounter() {}
+   hint() {}
+   lineWidth() {}
+   getError() { return 0 }
+   activeTexture() {}
+   getActiveAttrib() { return null }
+   getActiveUniform() { return null }
+   getAttachedShaders() { return [] }
+   getVertexAttrib() { return null }
+   getVertexAttribOffset() { return 0 }
+   getProgramParameter() { return 0 }
 }
 
 /**
@@ -280,23 +282,62 @@ export function test(
   let context: ReturnType<typeof createThree> = null!
   let unmount: () => void = null!
 
-  createRoot(dispose => {
-    unmount = dispose
-    context = createThree(
-      canvas,
-      merge(
-        {
-          get children() {
-            return children()
+  // Check if we're in a browser environment (vitest with browser provider)
+  const isBrowser = typeof document !== "undefined" && typeof document.createElement === "function"
+
+  if (isBrowser) {
+    // Browser environment: render to DOM
+    const container = document.createElement("div")
+    document.body.appendChild(container)
+    container.appendChild(canvas)
+
+    createRoot(dispose => {
+      unmount = () => {
+        dispose()
+        document.body.removeChild(container)
+      }
+      context = createThree(
+        canvas,
+        merge(
+          {
+            get children() {
+              return children()
+            },
+            camera: {
+              position: [0, 0, 5] as [number, number, number],
+            },
           },
-          camera: {
-            position: [0, 0, 5] as [number, number, number],
+          props,
+        ),
+      )
+      
+      // Render the scene graph to the DOM
+      render(() => context.SceneGraph(), container)
+    })
+  } else {
+    // Node environment: use createRoot only
+    createRoot(dispose => {
+      unmount = dispose
+      context = createThree(
+        canvas,
+        merge(
+          {
+            get children() {
+              return children()
+            },
+            camera: {
+              position: [0, 0, 5] as [number, number, number],
+            },
           },
-        },
-        props,
-      ),
-    )
-  })
+          props,
+        ),
+      )
+      
+      // Force component rendering by calling SceneGraph
+      // This triggers the context providers to be set up and accessible to children
+      context.SceneGraph()
+    })
+  }
 
   const waitTillNextFrame = () =>
     new Promise<void>(resolve => {

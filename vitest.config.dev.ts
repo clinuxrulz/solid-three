@@ -11,7 +11,12 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'node',
+    browser: {
+      provider: 'playwright',
+      enabled: true,
+      headless: true,
+      name: 'chromium',
+    },
     setupFiles: ['./vitest.setup.ts'],
     // Exclude Playwright test files
     exclude: ['**/node_modules/**', '**/dist/**', '**/*.spec.ts'],
