@@ -2,51 +2,37 @@
 import * as THREE from "three"
 import { describe, expect, it } from "vitest"
 import { createT } from "../../src/index.ts"
-import { TestCanvas, test as createTestContext } from "../../src/testing/index.tsx"
+import { test as createTestContext } from "../../src/testing/index.tsx"
 import type { Context } from "../../src/types.ts"
 
 const T = createT(THREE)
 
 describe("web Canvas", () => {
   it("should correctly mount", async () => {
-    let context: Context | undefined
-
     const testContext = createTestContext(() => (
-      <TestCanvas
-        ref={ctx => {
-          context = ctx
-        }}
-      >
-        <T.Group />
-      </TestCanvas>
+      <T.Group />
     ))
 
-    expect(context).toBeDefined()
-    expect(context?.scene).toBeDefined()
+    expect(testContext).toBeDefined()
+    expect(testContext.scene).toBeDefined()
     testContext.unmount()
   })
 
   it("should forward ref", async () => {
     let ref: Context | undefined
 
-    createTestContext(() => (
-      <TestCanvas
-        ref={r => {
-          ref = r
-        }}
-      >
-        <T.Group />
-      </TestCanvas>
+    const testContext = createTestContext(() => (
+      <T.Group />
     ))
+    
+    ref = testContext
 
     expect(ref).toBeDefined()
   })
 
   it("should correctly unmount", async () => {
     const testContext = createTestContext(() => (
-      <TestCanvas>
-        <T.Group />
-      </TestCanvas>
+      <T.Group />
     ))
 
     expect(() => testContext.unmount()).not.toThrow()

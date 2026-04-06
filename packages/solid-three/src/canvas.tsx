@@ -73,6 +73,15 @@ export function Canvas(props: ParentProps<CanvasProps>) {
       const result = untrack(() => createThree(_canvas, props))
       untrack(() => setSceneResult(result))
 
+      // Call the ref callback with the context if provided
+      if (props.ref) {
+        if (typeof props.ref === 'function') {
+          (props.ref as any)(result)
+        } else if (props.ref && typeof props.ref === 'object') {
+          (props.ref as any).value = result
+        }
+      }
+
       if (!isServer) {
         const ro = new ResizeObserver(() => {
           const { width, height } = _container.getBoundingClientRect()

@@ -328,8 +328,20 @@ export function TestCanvas(props: CanvasProps) {
     <div style={{ width: "100%", height: "100%" }}>{canvas}</div>
   ) as HTMLDivElement
 
-  const three = createRoot(() => createThree(canvas, props))
-  useRef(props, three)
+  let three: ReturnType<typeof createThree> = null!
+  createRoot(() => {
+    three = createThree(canvas, props)
+    useRef(props, three)
+    
+    // Call the ref callback with the context if provided
+    if (props.ref) {
+      if (typeof props.ref === 'function') {
+        (props.ref as any)(three)
+      } else if (props.ref && typeof props.ref === 'object') {
+        (props.ref as any).value = three
+      }
+    }
+  })
 
   return container
 }
