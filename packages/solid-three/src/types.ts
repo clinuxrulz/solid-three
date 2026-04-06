@@ -19,7 +19,7 @@ import type {
   Vector4 as ThreeVector4,
   WebGLRenderer,
 } from "three"
-import type { Intersect } from "../playground/controls/type-utils.ts"
+import type { Intersect } from "./utils/type-utils.ts"
 import type { CanvasProps } from "./canvas.tsx"
 import type { $S3C } from "./constants.ts"
 import type { EventRaycaster } from "./raycasters.tsx"
