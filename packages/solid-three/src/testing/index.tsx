@@ -2,7 +2,49 @@ import { type Accessor, type JSX, createRoot, merge } from "solid-js"
 import type { CanvasProps } from "../canvas.tsx"
 import { createThree } from "../create-three.tsx"
 import { useRef } from "../utils.ts"
-import { WebGL2RenderingContext } from "./webgl2-rendering-context.ts"
+
+/**
+ * Minimal WebGL2RenderingContext mock for testing
+ */
+class WebGL2RenderingContextMock {
+  [key: string]: any
+
+  constructor(canvas: HTMLCanvasElement) {
+    this.canvas = canvas
+    this.drawingBufferWidth = canvas.width
+    this.drawingBufferHeight = canvas.height
+  }
+
+  getParameter(paramId: number) {
+    switch (paramId) {
+      case 7938: // GL_VERSION
+        return ['WebGL2']
+      case 3088: // SCISSOR_BOX
+      case 2978: // VIEWPORT
+        return [0, 0, 1, 1]
+    }
+  }
+
+  getExtension() {
+    return {}
+  }
+
+  getShaderPrecisionFormat() {
+    return {
+      rangeMin: 127,
+      rangeMax: 127,
+      precision: 23,
+    }
+  }
+
+  getProgramInfoLog() {
+    return ''
+  }
+
+  getShaderInfoLog() {
+    return ''
+  }
+}
 
 /**
  * Initializes a testing enviromnent for `solid-three`.
@@ -100,14 +142,17 @@ const createTestCanvas = ({ width = 1280, height = 800 } = {}) => {
   if (typeof document !== "undefined" && typeof document.createElement === "function") {
     canvas = document.createElement("canvas")
   } else {
-    canvas = {
+    const mockCanvas = {
       style: {},
       addEventListener: (() => {}) as any,
       removeEventListener: (() => {}) as any,
       clientWidth: width,
       clientHeight: height,
-      getContext: (() => new WebGL2RenderingContext(canvas)) as any,
-    } as HTMLCanvasElement
+      width,
+      height,
+      getContext: (() => new WebGL2RenderingContextMock(mockCanvas)) as any,
+    } as unknown as HTMLCanvasElement
+    canvas = mockCanvas
   }
   canvas.width = width
   canvas.height = height
@@ -116,18 +161,16 @@ const createTestCanvas = ({ width = 1280, height = 800 } = {}) => {
   if (globalThis.HTMLCanvasElement) {
     const getContext = HTMLCanvasElement.prototype.getContext
     HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, id: string) {
-      if (id.startsWith("webgl")) return new WebGL2RenderingContext(this)
+      if (id.startsWith("webgl")) return new WebGL2RenderingContextMock(this) as any
       return getContext.apply(this, arguments as any)
     } as any
   }
 
-  class WebGLRenderingContext extends WebGL2RenderingContext {}
-  // @ts-expect-error
+  class WebGLRenderingContext extends WebGL2RenderingContextMock {}
   // eslint-disable-next-line
-  globalThis.WebGLRenderingContext ??= WebGLRenderingContext
-  // @ts-expect-error
+  globalThis.WebGLRenderingContext ??= WebGLRenderingContext as any
   // eslint-disable-next-line
-  globalThis.WebGL2RenderingContext ??= WebGL2RenderingContext
+  globalThis.WebGL2RenderingContext ??= WebGL2RenderingContextMock as any
 
   return canvas
 }

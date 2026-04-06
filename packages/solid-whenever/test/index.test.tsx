@@ -1,5 +1,5 @@
 import { createMemo, createRoot, createSignal } from 'solid-js'
-import { isServer } from 'solid-js/web'
+import { isServer } from '@solidjs/web'
 import { describe, expect, it, vi } from 'vitest'
 import {
   check,
