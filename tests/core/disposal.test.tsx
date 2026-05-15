@@ -136,4 +136,41 @@ describe("T component disposal", () => {
 
     expect(material.dispose).toHaveBeenCalledTimes(1)
   })
+
+  it("should not have property signals alive/read while it is disposed (should not crash)", async () => {
+    const [ foo, setFoo, ] = createSignal<{
+      bar: number,
+    } | undefined>({
+      bar: 42,
+    });
+    let { unmount, render } = await test(() => (
+      <Show when={foo()}>
+        {(foo) => {
+          let bar = () => foo().bar;
+          return (
+            <T.Mesh>
+              <T.BoxGeometry
+                args={[
+                  bar(),
+                  bar(),
+                  bar(),
+                ]}
+              />
+              <T.MeshNormalMaterial/>
+            </T.Mesh>
+          );
+        }}
+      </Show>
+    ));
+    await new Promise<void>((resolve) =>
+      setTimeout(() => resolve(), 100)
+    );
+    render(0.0);
+    setFoo(undefined);
+    render(0.0);
+    await new Promise<void>((resolve) =>
+      setTimeout(() => resolve(), 100)
+    );
+    unmount();
+  })
 })
